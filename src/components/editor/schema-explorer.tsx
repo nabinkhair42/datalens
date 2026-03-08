@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
+import { SchemaExplorerSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ interface Schema {
 interface SchemaExplorerProps {
   schemas: Schema[];
   isLoading?: boolean;
+  isRefreshing?: boolean;
   onRefresh?: () => void;
   onTableSelect?: (schema: string, table: string) => void;
   onColumnSelect?: (schema: string, table: string, column: string) => void;
@@ -117,20 +119,14 @@ function ColumnNode({ column }: { column: Column }) {
 export const SchemaExplorer = memo(function SchemaExplorer({
   schemas,
   isLoading,
+  isRefreshing,
   onRefresh,
   onTableSelect,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onColumnSelect: _onColumnSelect,
 }: SchemaExplorerProps) {
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-sm">Loading schema...</span>
-        </div>
-      </div>
-    );
+    return <SchemaExplorerSkeleton schemaCount={2} tablesPerSchema={5} expandedSchema />;
   }
 
   if (schemas.length === 0) {
@@ -139,8 +135,8 @@ export const SchemaExplorer = memo(function SchemaExplorer({
         <DatabaseIcon className="size-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">No schemas found</p>
         {onRefresh && (
-          <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCwIcon className="size-4" />
+          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
+            <RefreshCwIcon className={cn('size-4', isRefreshing && 'animate-spin')} />
             Refresh
           </Button>
         )}
@@ -154,8 +150,14 @@ export const SchemaExplorer = memo(function SchemaExplorer({
       <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
         <h3 className="text-sm font-medium">Schema Explorer</h3>
         {onRefresh && (
-          <Button variant="ghost" size="icon-sm" onClick={onRefresh} title="Refresh schema">
-            <RefreshCwIcon className="size-4" />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onRefresh}
+            title="Refresh schema"
+            disabled={isRefreshing}
+          >
+            <RefreshCwIcon className={cn('size-4', isRefreshing && 'animate-spin')} />
           </Button>
         )}
       </div>

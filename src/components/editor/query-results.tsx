@@ -139,7 +139,8 @@ export const QueryResults = memo(function QueryResults({
       <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">
-            {rowCount ?? data.length} row{(rowCount ?? data.length) !== 1 ? 's' : ''}
+            {rowCount ?? data.length} row
+            {(rowCount ?? data.length) !== 1 ? 's' : ''}
           </span>
           {executionTime !== undefined && (
             <span className="text-xs text-muted-foreground">{executionTime}ms</span>

@@ -2,8 +2,8 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { DatabaseIcon, MoreVerticalIcon, PlusIcon } from 'lucide-react';
+import Link from 'next/link';
 import { memo, useCallback, useMemo } from 'react';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -14,32 +14,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DATABASE_TYPE_LABELS } from '@/config/constants';
+import { formatDateTime } from '@/lib/formatters';
 import type { Connection } from '@/schemas/connection.schema';
 
 export interface ConnectionsTableProps {
   data: Connection[];
   isLoading?: boolean;
   onConnect: (connection: Connection) => void;
+  onEdit: (connection: Connection) => void;
   onDelete: (id: string) => void;
   onCreateNew?: () => void;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
 }
 
 export const ConnectionsTable = memo(function ConnectionsTable({
   data,
   isLoading,
   onConnect,
+  onEdit,
   onDelete,
   onCreateNew,
 }: ConnectionsTableProps): React.ReactElement {
@@ -94,7 +85,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         accessorKey: 'createdAt',
         header: 'Created at',
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span>
+          <span className="text-muted-foreground">{formatDateTime(row.original.createdAt)}</span>
         ),
       },
       {
@@ -103,10 +94,17 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         size: 50,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon-sm">
+            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
+              <span
+                className="group/button inline-flex shrink-0 items-center justify-center border border-input bg-background p-0 text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                style={{
+                  borderRadius: '0.375rem',
+                  width: '2rem',
+                  height: '2rem',
+                }}
+              >
                 <MoreVerticalIcon className="size-4" />
-              </Button>
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
@@ -117,7 +115,12 @@ export const ConnectionsTable = memo(function ConnectionsTable({
               >
                 Open
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => e.stopPropagation()} disabled>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(row.original);
+                }}
+              >
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -131,7 +134,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         ),
       },
     ],
-    [onConnect, handleDelete],
+    [onConnect, onEdit, handleDelete],
   );
 
   return (
@@ -151,7 +154,14 @@ export const ConnectionsTable = memo(function ConnectionsTable({
             <PlusIcon className="size-4" />
             New Connection
           </Button>
-        ) : undefined,
+        ) : (
+          <Button asChild>
+            <Link href="/connections/new">
+              <PlusIcon className="size-4" />
+              New Connection
+            </Link>
+          </Button>
+        ),
       }}
     />
   );

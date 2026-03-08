@@ -25,6 +25,7 @@ export default function TablesPage({ params }: TablesPageProps) {
   const {
     data: schemas,
     isLoading: isLoadingSchema,
+    isFetching: isFetchingSchema,
     refetch: refetchSchema,
   } = useConnectionSchema(connectionId);
   const executeQuery = useExecuteQuery();
@@ -134,6 +135,7 @@ export default function TablesPage({ params }: TablesPageProps) {
         <SchemaExplorer
           schemas={schemas ?? []}
           isLoading={isLoadingSchema}
+          isRefreshing={isFetchingSchema}
           onRefresh={() => refetchSchema()}
           onTableSelect={handleTableSelect}
         />

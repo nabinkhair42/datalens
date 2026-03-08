@@ -1,13 +1,31 @@
 'use client';
 
-import { ClockIcon, PlayIcon, SaveIcon, StarIcon } from 'lucide-react';
+import { ClockIcon, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { use, useCallback, useState } from 'react';
 
 import { QueryResults } from '@/components/editor/query-results';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useConnection } from '@/hooks/use-connections';
-import { useExecuteQuery, useQueryHistory } from '@/hooks/use-queries';
+import {
+  useCreateSavedQuery,
+  useDeleteSavedQuery,
+  useExecuteQuery,
+  useQueryHistory,
+  useSavedQueries,
+} from '@/hooks/use-queries';
 
 // Dynamic import for SQL Editor to avoid SSR issues with CodeMirror
 const SQLEditor = dynamic(
@@ -29,11 +47,21 @@ interface SQLEditorPageProps {
 export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   const { connectionId } = use(params);
   const { data: connection } = useConnection(connectionId);
-  const { data: history, refetch: refetchHistory } = useQueryHistory({ connectionId, limit: 20 });
+  const { data: history, refetch: refetchHistory } = useQueryHistory({
+    connectionId,
+    limit: 20,
+  });
+  const { data: savedQueries } = useSavedQueries();
   const executeQuery = useExecuteQuery();
+  const createSavedQuery = useCreateSavedQuery();
+  const deleteSavedQuery = useDeleteSavedQuery();
 
-  const [query, setQuery] = useState('SELECT * FROM users LIMIT 10;');
+  const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'saved' | 'history'>('history');
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [queryName, setQueryName] = useState('');
+  const [queryDescription, setQueryDescription] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [results, setResults] = useState<{
     data: Record<string, unknown>[];
     columns: string[];
@@ -125,45 +153,121 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     setQuery(historyQuery);
   }, []);
 
+  const handleSaveQuery = useCallback(async () => {
+    if (!queryName.trim() || !query.trim()) {
+      setSaveError('Query name is required');
+      return;
+    }
+
+    setSaveError(null);
+
+    try {
+      await createSavedQuery.mutateAsync({
+        name: queryName.trim(),
+        description: queryDescription.trim() || undefined,
+        query: query.trim(),
+        connectionId,
+      });
+
+      // Reset form and close dialog
+      setQueryName('');
+      setQueryDescription('');
+      setSaveDialogOpen(false);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save query');
+    }
+  }, [queryName, queryDescription, query, connectionId, createSavedQuery]);
+
+  const handleLoadSavedQuery = useCallback((savedQuery: string) => {
+    setQuery(savedQuery);
+  }, []);
+
+  const handleDeleteSavedQuery = useCallback(
+    async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      try {
+        await deleteSavedQuery.mutateAsync(id);
+      } catch (error) {
+        console.error('Failed to delete query:', error);
+      }
+    },
+    [deleteSavedQuery],
+  );
+
   return (
     <div className="flex h-full">
       {/* Left Sidebar - Saved & History */}
       <aside className="flex w-64 shrink-0 flex-col border-r">
         {/* Tabs */}
         <div className="flex border-b">
-          <button
-            type="button"
-            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+          <Button
+            className={`flex items-center justify-center ${
               activeTab === 'saved'
-                ? 'border-b-2 border-primary text-foreground'
+                ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
+            variant={'ghost'}
             onClick={() => setActiveTab('saved')}
           >
             <StarIcon className="mr-1 inline-block size-4" />
             Saved
-          </button>
-          <button
-            type="button"
-            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+          </Button>
+          <Button
+            className={`flex items-center justify-center ${
               activeTab === 'history'
-                ? 'border-b-2 border-primary text-foreground'
+                ? 'border-b-2 border text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             onClick={() => setActiveTab('history')}
+            variant={'ghost'}
           >
             <ClockIcon className="mr-1 inline-block size-4" />
             History
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-2">
           {activeTab === 'saved' ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <StarIcon className="mb-2 size-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No saved queries yet</p>
-              <p className="text-xs text-muted-foreground">Save queries for quick access</p>
+            <div className="space-y-1">
+              {savedQueries && savedQueries.length > 0 ? (
+                savedQueries.map((item) => (
+                  <div
+                    key={item.id}
+                    className="group relative w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-muted"
+                  >
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => handleLoadSavedQuery(item.query)}
+                    >
+                      <p className="truncate font-medium text-sm">{item.name}</p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {item.query}
+                      </p>
+                      {item.description && (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {item.description}
+                        </p>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => handleDeleteSavedQuery(item.id, e)}
+                      disabled={deleteSavedQuery.isPending}
+                    >
+                      <Trash2Icon className="size-4 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <StarIcon className="mb-2 size-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No saved queries yet</p>
+                  <p className="text-xs text-muted-foreground">Save queries for quick access</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-1">
@@ -204,10 +308,58 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Untitled</span>
-            <Button variant="outline" size="sm" disabled>
-              <SaveIcon className="size-4" />
-              Save
-            </Button>
+            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+              <DialogTrigger
+                render={
+                  <Button variant="outline" size="sm" disabled={!query.trim()}>
+                    <SaveIcon className="size-4" />
+                    Save
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Save Query</DialogTitle>
+                  <DialogDescription>Save this query for quick access later.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="query-name">Name</Label>
+                    <Input
+                      id="query-name"
+                      placeholder="My query"
+                      value={queryName}
+                      onChange={(e) => setQueryName(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="query-description">Description (optional)</Label>
+                    <Input
+                      id="query-description"
+                      placeholder="What does this query do?"
+                      value={queryDescription}
+                      onChange={(e) => setQueryDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Query Preview</Label>
+                    <div className="max-h-24 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">
+                      {query}
+                    </div>
+                  </div>
+                  {saveError && <p className="text-sm text-destructive">{saveError}</p>}
+                </div>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+                  <Button
+                    onClick={handleSaveQuery}
+                    disabled={createSavedQuery.isPending || !queryName.trim()}
+                  >
+                    {createSavedQuery.isPending ? 'Saving...' : 'Save Query'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="flex items-center gap-2">

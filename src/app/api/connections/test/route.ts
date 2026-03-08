@@ -9,7 +9,13 @@ import { connectionServerService } from '@/server/services/connection.service';
  * POST /api/connections/test
  */
 export const POST = withAuth(async (req: NextRequest) => {
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return createErrorResponse('Invalid JSON body', 400);
+  }
+
   const parsed = connectionSchema.safeParse(body);
 
   if (!parsed.success) {

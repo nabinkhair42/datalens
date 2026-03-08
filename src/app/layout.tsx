@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Suspense } from 'react';
 
+import { PageLoader } from '@/components/loaders/spinner';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 
 import './globals.css';
+import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -19,8 +22,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'DataLens',
-    template: '%s | DataLens',
+    default: APP_NAME,
+    template: APP_DESCRIPTION,
   },
   description: 'The web-native, collaborative database IDE. Figma for your database.',
   keywords: ['database', 'sql', 'postgresql', 'mysql', 'visualization', 'ide'],
@@ -39,7 +42,9 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <QueryProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <Suspense fallback={<PageLoader />}>
+              <AuthProvider>{children}</AuthProvider>
+            </Suspense>
           </QueryProvider>
         </ThemeProvider>
       </body>

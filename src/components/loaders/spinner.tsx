@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface SpinnerProps {
@@ -11,7 +13,10 @@ const sizeClasses = {
   lg: 'h-12 w-12 border-4',
 };
 
-export function Spinner({ size = 'md', className }: SpinnerProps): React.ReactElement {
+export const Spinner = memo(function Spinner({
+  size = 'md',
+  className,
+}: SpinnerProps): React.ReactElement {
   return (
     <output
       className={cn(
@@ -22,21 +27,27 @@ export function Spinner({ size = 'md', className }: SpinnerProps): React.ReactEl
       aria-label="Loading"
     />
   );
-}
+});
 
-export function PageLoader(): React.ReactElement {
+export const PageLoader = memo(function PageLoader(): React.ReactElement {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <Spinner size="lg" />
     </div>
   );
+});
+
+interface InlineLoaderProps {
+  text?: string;
 }
 
-export function InlineLoader({ text = 'Loading...' }: { text?: string }): React.ReactElement {
+export const InlineLoader = memo(function InlineLoader({
+  text = 'Loading...',
+}: InlineLoaderProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2 text-muted-foreground">
       <Spinner size="sm" />
       <span className="text-sm">{text}</span>
     </div>
   );
-}
+});

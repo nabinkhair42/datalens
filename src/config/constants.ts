@@ -1,13 +1,6 @@
-// ============================================
-// Application Constants
-// ============================================
-
-export const APP_NAME = 'DataLens';
-export const APP_DESCRIPTION = 'The web-native, collaborative database IDE';
-
-// ============================================
-// Database Types
-// ============================================
+export const APP_NAME = 'DataLens | The web-native, collaborative database IDE';
+export const APP_DESCRIPTION =
+  'DataLens is a web-based database IDE designed for developers, data analysts, and teams. It provides a collaborative environment for managing database connections, writing and executing SQL queries, and visualizing results. With support for multiple database types and a focus on user experience, DataLens aims to streamline database workflows and enhance productivity.';
 
 export const DATABASE_TYPES = {
   POSTGRESQL: 'postgresql',
@@ -35,10 +28,6 @@ export const DEFAULT_PORTS: Record<DatabaseType, number> = {
   mssql: 1433,
 };
 
-// ============================================
-// Query Status
-// ============================================
-
 export const QUERY_STATUS = {
   PENDING: 'pending',
   RUNNING: 'running',
@@ -49,19 +38,11 @@ export const QUERY_STATUS = {
 
 export type QueryStatus = (typeof QUERY_STATUS)[keyof typeof QUERY_STATUS];
 
-// ============================================
-// Pagination
-// ============================================
-
 export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 50,
   PAGE_SIZE_OPTIONS: [10, 25, 50, 100, 250],
   MAX_PAGE_SIZE: 1000,
 } as const;
-
-// ============================================
-// Query Limits
-// ============================================
 
 export const QUERY_LIMITS = {
   MAX_QUERY_LENGTH: 100000,
@@ -70,19 +51,11 @@ export const QUERY_LIMITS = {
   MAX_RESULT_ROWS: 10000,
 } as const;
 
-// ============================================
-// Connection Limits
-// ============================================
-
 export const CONNECTION_LIMITS = {
   MAX_CONNECTIONS_FREE: 2,
   MAX_CONNECTIONS_PRO: -1, // unlimited
   CONNECTION_TIMEOUT_MS: 10000,
 } as const;
-
-// ============================================
-// Storage Keys
-// ============================================
 
 export const STORAGE_KEYS = {
   THEME: 'datalens-theme',
@@ -91,10 +64,6 @@ export const STORAGE_KEYS = {
   EDITOR_SETTINGS: 'datalens-editor-settings',
   QUERY_HISTORY_LOCAL: 'datalens-query-history',
 } as const;
-
-// ============================================
-// Query Keys for React Query
-// ============================================
 
 export const QUERY_KEYS = {
   CONNECTIONS: ['connections'] as const,
@@ -108,15 +77,9 @@ export const QUERY_KEYS = {
   USER_SETTINGS: ['user', 'settings'] as const,
 } as const;
 
-// ============================================
-// Route Paths
-// ============================================
-
 export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
-  REGISTER: '/register',
-  FORGOT_PASSWORD: '/forgot-password',
   CONNECTIONS: '/connections',
   CONNECTION: (id: string) => `/connections/${id}`,
   QUERY: '/query',

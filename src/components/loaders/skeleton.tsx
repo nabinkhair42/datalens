@@ -86,6 +86,9 @@ export function ConnectionListSkeleton({ count = 3 }: { count?: number }): React
   );
 }
 
+// Pre-defined widths that look varied but are deterministic
+const EDITOR_LINE_WIDTHS = ['72%', '58%', '85%', '45%', '68%', '52%', '78%', '62%'];
+
 export function EditorSkeleton(): React.ReactElement {
   return (
     <div className="flex h-full flex-col">
@@ -96,8 +99,8 @@ export function EditorSkeleton(): React.ReactElement {
       </div>
       <div className="flex-1 p-4">
         <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-5" style={{ width: `${Math.random() * 40 + 40}%` }} />
+          {EDITOR_LINE_WIDTHS.map((width, i) => (
+            <Skeleton key={i} className="h-5" style={{ width }} />
           ))}
         </div>
       </div>

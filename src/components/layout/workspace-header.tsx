@@ -4,13 +4,14 @@ import {
   ChevronDownIcon,
   ChevronLeftIcon,
   DatabaseIcon,
-  LoaderIcon,
   TableIcon,
   TerminalSquareIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { memo, useMemo } from 'react';
 
+import { Skeleton } from '@/components/loaders';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,15 +29,49 @@ interface WorkspaceHeaderProps {
   connectionId: string;
 }
 
-export function WorkspaceHeader({ connectionId }: WorkspaceHeaderProps) {
+export const WorkspaceHeader = memo(function WorkspaceHeader({
+  connectionId,
+}: WorkspaceHeaderProps) {
   const pathname = usePathname();
   const { data: connection, isLoading } = useConnection(connectionId);
   const { data: connections } = useConnections();
 
+  // Move useMemo before early returns to follow Rules of Hooks
+  const navItems = useMemo(
+    () => [
+      {
+        label: 'Tables',
+        href: `/workspace/${connectionId}/tables`,
+        icon: TableIcon,
+      },
+      {
+        label: 'SQL Editor',
+        href: `/workspace/${connectionId}/sql`,
+        icon: TerminalSquareIcon,
+      },
+    ],
+    [connectionId],
+  );
+
   if (isLoading) {
     return (
-      <header className="flex h-12 shrink-0 items-center justify-center border-b bg-background">
-        <LoaderIcon className="size-5 animate-spin text-muted-foreground" />
+      <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-8" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-4" />
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="size-4" />
+          </div>
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <Skeleton className="size-8" />
+        </div>
       </header>
     );
   }
@@ -58,19 +93,6 @@ export function WorkspaceHeader({ connectionId }: WorkspaceHeaderProps) {
   const dbLabel =
     DATABASE_TYPE_LABELS[connection.type as keyof typeof DATABASE_TYPE_LABELS] ?? connection.type;
 
-  const navItems = [
-    {
-      label: 'Tables',
-      href: `/workspace/${connectionId}/tables`,
-      icon: TableIcon,
-    },
-    {
-      label: 'SQL Editor',
-      href: `/workspace/${connectionId}/sql`,
-      icon: TerminalSquareIcon,
-    },
-  ];
-
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-3">
@@ -83,22 +105,21 @@ export function WorkspaceHeader({ connectionId }: WorkspaceHeaderProps) {
 
         {/* Connection Selector Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" className="gap-2 font-medium">
-              <DatabaseIcon className="size-4" />
-              {connection.name}
-              <ChevronDownIcon className="size-4 opacity-50" />
-            </Button>
+          <DropdownMenuTrigger
+            className={
+              'flex items-center justify-between hover:bg-accent px-2 rounded gap-2 font-medium'
+            }
+          >
+            <DatabaseIcon className="size-4" />
+            {connection.name}
+            <ChevronDownIcon className="size-4 opacity-50" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
             {connections?.map((conn) => (
               <DropdownMenuItem key={conn.id}>
                 <Link
                   href={`/workspace/${conn.id}/tables`}
-                  className={cn(
-                    'flex w-full items-center gap-2',
-                    conn.id === connectionId && 'bg-accent',
-                  )}
+                  className={cn('flex w-full items-center gap-2')}
                 >
                   <DatabaseIcon className="size-4" />
                   <span className="flex-1 truncate">{conn.name}</span>
@@ -113,10 +134,6 @@ export function WorkspaceHeader({ connectionId }: WorkspaceHeaderProps) {
         </DropdownMenu>
 
         <Badge variant="secondary">{dbLabel}</Badge>
-
-        <span className="hidden text-sm text-muted-foreground sm:inline">
-          {connection.host}:{connection.port}/{connection.database}
-        </span>
       </div>
 
       {/* Navigation Tabs */}
@@ -138,4 +155,4 @@ export function WorkspaceHeader({ connectionId }: WorkspaceHeaderProps) {
       </div>
     </header>
   );
-}
+});

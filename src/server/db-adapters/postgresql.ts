@@ -41,11 +41,21 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
 
   async executeQuery(query: string): Promise<QueryResult> {
     const startTime = Date.now();
+    const QUERY_TIMEOUT_MS = 30000; // 30 seconds
     let client: pg.PoolClient | null = null;
 
     try {
       client = await this.pool.connect();
-      const result = await client.query(query);
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Query timeout: execution exceeded 30 seconds'));
+        }, QUERY_TIMEOUT_MS);
+      });
+
+      // Race the query against the timeout
+      const result = await Promise.race([client.query(query), timeoutPromise]);
 
       const executionTime = Date.now() - startTime;
 
@@ -64,10 +74,14 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       };
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      throw new QueryExecutionError(
-        error instanceof Error ? error.message : 'Query execution failed',
-        executionTime,
-      );
+      const message = error instanceof Error ? error.message : 'Query execution failed';
+
+      // Check if this is a timeout error
+      if (message.includes('Query timeout')) {
+        throw new QueryExecutionError(message, executionTime);
+      }
+
+      throw new QueryExecutionError(message, executionTime);
     } finally {
       if (client) {
         client.release();

@@ -10,7 +10,13 @@ export const GET = withAuth(async (_req, { userId }) => {
 });
 
 export const POST = withAuth(async (req: NextRequest, { userId }) => {
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return createErrorResponse('Invalid JSON body', 400);
+  }
+
   const parsed = connectionSchema.safeParse(body);
 
   if (!parsed.success) {

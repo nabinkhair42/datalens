@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useEffect, useMemo } from 'react';
 
 import { PageLoader } from '@/components/loaders/spinner';
@@ -25,6 +25,7 @@ function isPublicPath(pathname: string): boolean {
 export function AuthProvider({ children }: { children: ReactNode }): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { data: session, isLoading } = useSession();
 
   // rerender-derived-state: Derive boolean from session
@@ -43,9 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
     }
 
     if (isAuthenticated && pathname === '/login') {
-      router.push('/workspace');
+      // Use the callbackUrl from search params, or default to /workspace
+      const callbackUrl = searchParams.get('callbackUrl') || '/workspace';
+      router.push(callbackUrl);
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+  }, [isAuthenticated, isLoading, pathname, router, searchParams]);
 
   // rerender-memo-with-default-value: Memoize context value to prevent re-renders
   const contextValue = useMemo<AuthContextType>(

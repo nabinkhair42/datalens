@@ -1,7 +1,3 @@
-// ============================================
-// API Endpoints Configuration
-// ============================================
-
 export const API_ENDPOINTS = {
   // Auth endpoints (handled by Better Auth at /api/auth/*)
   AUTH: {

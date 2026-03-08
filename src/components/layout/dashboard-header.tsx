@@ -2,15 +2,20 @@
 
 import { DatabaseIcon } from 'lucide-react';
 import Link from 'next/link';
+import { memo, useCallback } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { UserControl } from '@/components/shared/user-control';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useLogout } from '@/hooks/use-auth';
 
-export function DashboardHeader() {
+export const DashboardHeader = memo(function DashboardHeader() {
   const { session } = useAuth();
   const logoutMutation = useLogout();
+
+  const handleLogout = useCallback(() => {
+    logoutMutation.mutate();
+  }, [logoutMutation]);
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
@@ -24,7 +29,7 @@ export function DashboardHeader() {
           {session?.user && (
             <UserControl
               user={session.user}
-              onLogout={() => logoutMutation.mutate()}
+              onLogout={handleLogout}
               isLoggingOut={logoutMutation.isPending}
             />
           )}
@@ -32,4 +37,4 @@ export function DashboardHeader() {
       </div>
     </header>
   );
-}
+});

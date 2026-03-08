@@ -13,6 +13,107 @@ import type {
 } from '@/schemas/query.schema';
 import { type ConnectionConfig, getAdapter, QueryExecutionError } from '@/server/db-adapters';
 
+// Blocked DDL keywords that could modify database structure or permissions
+const BLOCKED_KEYWORDS = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'GRANT', 'REVOKE'] as const;
+
+// Logger utility for structured query logging
+const queryLogger = {
+  start: (queryId: string, connectionId: string, queryPreview: string) => {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'query_start',
+        queryId,
+        connectionId,
+        queryPreview: queryPreview.substring(0, 100),
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  },
+  success: (queryId: string, connectionId: string, executionTime: number, rowCount: number) => {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'query_success',
+        queryId,
+        connectionId,
+        executionTime,
+        rowCount,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  },
+  failure: (queryId: string, connectionId: string, executionTime: number, error: string) => {
+    console.log(
+      JSON.stringify({
+        level: 'error',
+        event: 'query_failure',
+        queryId,
+        connectionId,
+        executionTime,
+        error,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  },
+  blocked: (queryId: string, connectionId: string, reason: string) => {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        event: 'query_blocked',
+        queryId,
+        connectionId,
+        reason,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  },
+};
+
+/**
+ * Validates a query for dangerous DDL operations.
+ * Returns an error message if the query is blocked, or a warning message for DELETE operations.
+ */
+function validateQuery(query: string): { blocked: boolean; message?: string; warning?: string } {
+  const normalizedQuery = query.trim().toUpperCase();
+
+  // Check if query starts with or contains blocked keywords as standalone words
+  for (const keyword of BLOCKED_KEYWORDS) {
+    // Check if query starts with the keyword
+    if (
+      normalizedQuery.startsWith(`${keyword} `) ||
+      normalizedQuery.startsWith(`${keyword}\n`) ||
+      normalizedQuery.startsWith(`${keyword}\t`)
+    ) {
+      return {
+        blocked: true,
+        message: `Query blocked: ${keyword} operations are not allowed for safety reasons`,
+      };
+    }
+
+    // Check if the keyword appears as a standalone word (not part of another word)
+    // Using word boundary pattern: space/newline/tab before and after
+    const keywordPattern = new RegExp(`(^|\\s|;)${keyword}(\\s|;|$)`, 'i');
+    if (keywordPattern.test(query)) {
+      return {
+        blocked: true,
+        message: `Query blocked: ${keyword} operations are not allowed for safety reasons`,
+      };
+    }
+  }
+
+  // Check for DELETE operations - allow but with warning
+  const deletePattern = /(\s|^|;)DELETE(\s|;|$)/i;
+  if (deletePattern.test(query)) {
+    return {
+      blocked: false,
+      warning: 'DELETE operation detected. Please ensure you have appropriate WHERE clauses.',
+    };
+  }
+
+  return { blocked: false };
+}
+
 function mapToHistoryItem(row: typeof queryHistory.$inferSelect): QueryHistoryItem {
   return {
     id: row.id,
@@ -40,6 +141,9 @@ function mapToSavedQuery(row: typeof savedQueries.$inferSelect): SavedQuery {
 
 export const queryServerService = {
   async execute(data: ExecuteQueryFormData, userId: string): Promise<QueryResult> {
+    const queryId = generateId();
+    const startTime = Date.now();
+
     // Verify the user has access to this connection
     const [connection] = await db
       .select()
@@ -50,6 +154,30 @@ export const queryServerService = {
     if (!connection) {
       throw new Error('Connection not found');
     }
+
+    // Validate query for dangerous DDL operations
+    const validation = validateQuery(data.query);
+    if (validation.blocked) {
+      queryLogger.blocked(queryId, data.connectionId, validation.message ?? 'Unknown reason');
+      throw new Error(validation.message);
+    }
+
+    // Log warning for DELETE operations (but allow them)
+    if (validation.warning) {
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          event: 'query_warning',
+          queryId,
+          connectionId: data.connectionId,
+          warning: validation.warning,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    }
+
+    // Log query start
+    queryLogger.start(queryId, data.connectionId, data.query);
 
     let result: QueryResult;
     let success = true;
@@ -73,6 +201,9 @@ export const queryServerService = {
       const adapter = await getAdapter(config);
       result = await adapter.executeQuery(data.query);
       executionTime = result.executionTime ?? 0;
+
+      // Log success
+      queryLogger.success(queryId, data.connectionId, executionTime, result.rowCount ?? 0);
     } catch (error) {
       success = false;
       if (error instanceof QueryExecutionError) {
@@ -80,7 +211,11 @@ export const queryServerService = {
         executionTime = error.executionTime;
       } else {
         errorMessage = error instanceof Error ? error.message : 'Query execution failed';
+        executionTime = Date.now() - startTime;
       }
+
+      // Log failure
+      queryLogger.failure(queryId, data.connectionId, executionTime, errorMessage);
 
       // Re-throw to propagate error to client
       // Record in history first

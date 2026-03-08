@@ -1,9 +1,10 @@
 'use client';
 
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { CopyIcon, LoaderIcon } from 'lucide-react';
+import { CopyIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 
+import { TableDataGridSkeleton } from '@/components/loaders';
 import { cn } from '@/lib/utils';
 
 interface TableDataGridProps {
@@ -54,11 +55,7 @@ export const TableDataGrid = memo(function TableDataGrid({
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TableDataGridSkeleton />;
   }
 
   if (data.length === 0 && columns.length === 0) {

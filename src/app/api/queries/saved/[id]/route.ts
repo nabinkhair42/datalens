@@ -27,7 +27,13 @@ export const PUT = withAuth(async (req: NextRequest, { params, userId }) => {
     return createErrorResponse('Query ID is required', 400);
   }
 
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return createErrorResponse('Invalid JSON body', 400);
+  }
+
   const parsed = savedQuerySchema.partial().safeParse(body);
 
   if (!parsed.success) {

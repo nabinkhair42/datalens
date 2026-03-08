@@ -14,6 +14,7 @@ import type { Connection } from '@/schemas/connection.schema';
 export default function WorkspacePage() {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
+  const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
   const { data: connections, isLoading, error } = useConnections();
   const deleteConnection = useDeleteConnection();
 
@@ -32,7 +33,20 @@ export default function WorkspacePage() {
   );
 
   const handleOpenForm = useCallback(() => {
+    setEditingConnection(undefined);
     setFormOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((connection: Connection) => {
+    setEditingConnection(connection);
+    setFormOpen(true);
+  }, []);
+
+  const handleFormClose = useCallback((open: boolean) => {
+    setFormOpen(open);
+    if (!open) {
+      setEditingConnection(undefined);
+    }
   }, []);
 
   return (
@@ -62,6 +76,7 @@ export default function WorkspacePage() {
               data={connections ?? []}
               isLoading={isLoading}
               onConnect={handleConnect}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               onCreateNew={handleOpenForm}
             />
@@ -69,7 +84,11 @@ export default function WorkspacePage() {
         </div>
       </main>
 
-      <ConnectionForm open={formOpen} onOpenChange={setFormOpen} />
+      <ConnectionForm
+        open={formOpen}
+        onOpenChange={handleFormClose}
+        connection={editingConnection}
+      />
     </div>
   );
 }

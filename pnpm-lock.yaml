@@ -20,6 +20,9 @@ importers:
       '@codemirror/lang-sql':
         specifier: ^6.10.0
         version: 6.10.0
+      '@codemirror/language':
+        specifier: ^6.11.2
+        version: 6.12.2
       '@codemirror/state':
         specifier: ^6.5.4
         version: 6.5.4
@@ -35,6 +38,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.3))
+      '@lezer/highlight':
+        specifier: ^1.2.1
+        version: 1.2.3
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.3)
