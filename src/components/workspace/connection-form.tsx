@@ -1,14 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  CheckCircle2Icon,
-  EyeClosed,
-  EyeIcon,
-  Loader2Icon,
-  XCircleIcon,
-  ZapIcon,
-} from 'lucide-react';
+import { CheckCircle2Icon, EyeClosed, EyeIcon, Loader2Icon, XCircleIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -368,26 +361,24 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleTestConnection}
-              disabled={testConnection.isPending}
-            >
-              {testConnection.isPending ? (
-                <Loader2Icon className="size-4 animate-spin" />
-              ) : (
-                <ZapIcon className="size-4" />
-              )}
-              {testConnection.isPending ? 'Testing...' : 'Test Connection'}
+          <DialogFooter className="flex justify-between items-center">
+            <Button type="button" variant="destructive" onClick={handleClose}>
+              No, Close
             </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleTestConnection}
+                disabled={testConnection.isPending}
+              >
+                {testConnection.isPending && <Loader2Icon className="size-4 animate-spin" />}
+                {testConnection.isPending ? 'Testing...' : 'Test Connection'}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditing ? 'Yes, Update' : 'Create'}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
