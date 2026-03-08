@@ -3,11 +3,10 @@
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-
-import { ConnectionForm } from '@/components/connections/connection-form';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
+import { ConnectionForm } from '@/components/workspace/connection-form';
 import { useConnections, useDeleteConnection } from '@/hooks/use-connections';
 import type { Connection } from '@/schemas/connection.schema';
 

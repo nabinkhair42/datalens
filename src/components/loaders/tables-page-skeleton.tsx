@@ -1,7 +1,6 @@
 import { memo } from 'react';
-
+import { Skeleton } from '@/components/ui/skeleton';
 import { SchemaExplorerSkeleton } from './schema-explorer-skeleton';
-import { Skeleton } from './skeleton';
 
 // Pre-defined widths that look varied but are deterministic (12 rows x 6 columns)
 const GRID_CELL_WIDTHS = [

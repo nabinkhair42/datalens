@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { Skeleton } from './skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const SQLEditorSkeleton = memo(function SQLEditorSkeleton(): React.ReactElement {
   return (

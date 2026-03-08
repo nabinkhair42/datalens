@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { auth } from './auth';
+import { auth } from '@/lib/auth';
 
 export async function getSession(): Promise<Awaited<ReturnType<typeof auth.api.getSession>>> {
   const headersList = await headers();

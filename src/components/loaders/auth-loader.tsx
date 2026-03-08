@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/loaders/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AuthLoader() {
   return (

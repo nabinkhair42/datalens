@@ -36,18 +36,3 @@ export const PageLoader = memo(function PageLoader(): React.ReactElement {
     </div>
   );
 });
-
-interface InlineLoaderProps {
-  text?: string;
-}
-
-export const InlineLoader = memo(function InlineLoader({
-  text = 'Loading...',
-}: InlineLoaderProps): React.ReactElement {
-  return (
-    <div className="flex items-center gap-2 text-muted-foreground">
-      <Spinner size="sm" />
-      <span className="text-sm">{text}</span>
-    </div>
-  );
-});

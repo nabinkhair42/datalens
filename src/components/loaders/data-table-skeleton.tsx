@@ -1,6 +1,5 @@
 import { memo } from 'react';
-
-import { Skeleton } from './skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Pre-defined widths for skeleton rows
 const SKELETON_ROW_WIDTHS = [

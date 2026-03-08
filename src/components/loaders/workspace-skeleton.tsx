@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { Skeleton } from './skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const WorkspaceHeaderSkeleton = memo(function WorkspaceHeaderSkeleton(): React.ReactElement {
   return (

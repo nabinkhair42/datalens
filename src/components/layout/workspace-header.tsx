@@ -10,8 +10,6 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { memo, useMemo } from 'react';
-
-import { Skeleton } from '@/components/loaders';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { DATABASE_TYPE_LABELS } from '@/config/constants';
 import { useConnection, useConnections } from '@/hooks/use-connections';
