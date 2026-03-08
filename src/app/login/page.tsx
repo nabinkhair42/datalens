@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 
 import { LoginForm } from '@/components/auth/login-form';
-import { PageLoader } from '@/components/loaders/spinner';
+import AuthLoader from '@/components/loaders/auth-loader';
 
 export default function LoginPage(): React.ReactElement {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<AuthLoader />}>
       <LoginForm />
     </Suspense>
   );

@@ -11,6 +11,7 @@ import {
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, CopyIcon, DownloadIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
+import { QueryResultsSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -99,14 +100,7 @@ export const QueryResults = memo(function QueryResults({
   }
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          <span>Executing query...</span>
-        </div>
-      </div>
-    );
+    return <QueryResultsSkeleton />;
   }
 
   if (data.length === 0 && columns.length === 0) {

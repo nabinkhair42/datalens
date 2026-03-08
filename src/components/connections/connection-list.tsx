@@ -1,8 +1,9 @@
 'use client';
 
-import { DatabaseIcon, LoaderIcon, PlusIcon } from 'lucide-react';
+import { DatabaseIcon, PlusIcon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
+import { ConnectionListSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
 import { useConnections } from '@/hooks/use-connections';
 import type { Connection } from '@/schemas/connection.schema';
@@ -40,11 +41,7 @@ export function ConnectionList({ onConnect }: ConnectionListProps) {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <ConnectionListSkeleton count={3} />;
   }
 
   if (error) {

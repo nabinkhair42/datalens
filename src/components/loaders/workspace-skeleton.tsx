@@ -52,42 +52,106 @@ export const WorkspaceSkeleton = memo(function WorkspaceSkeleton({
   );
 });
 
+// Pre-defined widths for table data grid cells
+const TABLE_ROW_WIDTHS = [
+  ['72%', '58%', '85%', '45%', '68%', '52%'],
+  ['55%', '78%', '42%', '65%', '80%', '48%'],
+  ['68%', '45%', '72%', '55%', '62%', '75%'],
+  ['42%', '82%', '58%', '70%', '48%', '65%'],
+  ['75%', '52%', '68%', '45%', '78%', '55%'],
+  ['58%', '70%', '45%', '82%', '52%', '68%'],
+  ['65%', '48%', '75%', '58%', '70%', '42%'],
+  ['78%', '62%', '52%', '72%', '45%', '80%'],
+];
+
 const TablesContentSkeleton = memo(function TablesContentSkeleton(): React.ReactElement {
   return (
-    <div className="flex flex-1 flex-col p-6">
-      {/* Page title */}
-      <div className="mb-6">
-        <Skeleton className="mb-2 h-8 w-32" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-
-      {/* Search and filters */}
-      <div className="mb-4 flex items-center gap-4">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-10 w-32" />
-      </div>
-
-      {/* Table skeleton */}
-      <div className="rounded-lg border">
-        {/* Header */}
-        <div className="flex gap-4 border-b bg-muted/50 px-4 py-3">
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-        {/* Rows */}
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="flex gap-4 border-b px-4 py-3">
-            <div className="flex flex-1 items-center gap-2">
-              <Skeleton className="size-4" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <Skeleton className="h-4 flex-1" />
-            <Skeleton className="h-4 flex-1" />
-            <Skeleton className="size-8" />
+    <div className="flex flex-1">
+      {/* Schema Sidebar Skeleton */}
+      <aside className="w-64 shrink-0 border-r">
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between border-b px-3 py-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="size-7" />
           </div>
-        ))}
+
+          {/* Schema tree */}
+          <div className="flex-1 overflow-auto p-2">
+            {/* Schema node */}
+            <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
+              <Skeleton className="size-4 shrink-0" />
+              <Skeleton className="size-4 shrink-0" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            {/* Tables */}
+            <div className="ml-3 border-l pl-2">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="flex items-center gap-1.5 rounded-md px-2 py-1 pl-5">
+                  <Skeleton className="size-4 shrink-0" />
+                  <Skeleton className="size-4 shrink-0" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content - empty state or data grid */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-28" />
+            <div className="ml-4 flex items-center gap-2 border-l pl-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="size-8" />
+              <Skeleton className="size-8" />
+              <Skeleton className="size-8" />
+            </div>
+          </div>
+        </div>
+
+        {/* Data Grid */}
+        <div className="flex-1 overflow-hidden">
+          {/* Header row */}
+          <div className="flex shrink-0 gap-px border-b bg-muted/50">
+            <div className="w-10 border-r px-2 py-2">
+              <Skeleton className="size-4" />
+            </div>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex h-10 flex-1 items-center border-r px-3 last:border-r-0"
+              >
+                <Skeleton className="h-4 w-full max-w-24" />
+              </div>
+            ))}
+          </div>
+          {/* Data rows */}
+          {TABLE_ROW_WIDTHS.map((rowWidths, rowIndex) => (
+            <div key={rowIndex} className="flex gap-px border-b">
+              <div className="w-10 border-r px-2 py-2">
+                <Skeleton className="size-4" />
+              </div>
+              {rowWidths.map((width, colIndex) => (
+                <div
+                  key={colIndex}
+                  className="flex h-9 flex-1 items-center border-r px-3 last:border-r-0"
+                >
+                  <Skeleton className="h-4" style={{ width }} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

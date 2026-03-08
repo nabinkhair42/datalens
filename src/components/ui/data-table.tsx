@@ -12,9 +12,10 @@ import {
   useReactTable,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { ChevronLeftIcon, ChevronRightIcon, LoaderIcon, SearchIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import { DataTableSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -82,9 +83,11 @@ export function DataTable<TData, TValue>({
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <LoaderIcon className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <DataTableSkeleton
+        columnCount={columns.length || 5}
+        rowCount={5}
+        hasSearch={enableGlobalFilter || !!searchColumn}
+      />
     );
   }
 

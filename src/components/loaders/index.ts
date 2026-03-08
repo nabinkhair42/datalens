@@ -1,3 +1,4 @@
+export * from './data-table-skeleton';
 export * from './schema-explorer-skeleton';
 export * from './skeleton';
 export * from './spinner';

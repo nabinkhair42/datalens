@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/loaders/skeleton';
 
-export default function LoginLoading() {
+export default function AuthLoader() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Left Panel skeleton */}
