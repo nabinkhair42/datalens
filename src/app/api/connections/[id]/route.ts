@@ -11,7 +11,8 @@ export const GET = withAuth(async (_req, { params, userId }) => {
     return createErrorResponse('Connection ID is required', 400);
   }
 
-  const connection = await connectionServerService.get(id, userId);
+  // Include decrypted password for editing
+  const connection = await connectionServerService.get(id, userId, true);
 
   if (!connection) {
     return createErrorResponse('Connection not found', 404);

@@ -59,6 +59,8 @@ export interface Connection {
   sshUsername: string | null;
   createdAt: string;
   updatedAt: string;
+  // Password is included when fetching single connection for editing
+  password?: string;
 }
 
 export interface ConnectionTestResult {

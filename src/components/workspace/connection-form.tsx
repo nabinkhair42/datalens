@@ -1,7 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2Icon, Loader2Icon, XCircleIcon, ZapIcon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  EyeClosed,
+  EyeIcon,
+  Loader2Icon,
+  XCircleIcon,
+  ZapIcon,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -109,7 +116,7 @@ const getDefaultValues = (connection?: Connection): ConnectionFormValues => {
       port: connection.port,
       database: connection.database,
       username: connection.username,
-      password: '',
+      password: connection.password ?? '',
       ssl: connection.ssl,
       sshEnabled: connection.sshEnabled,
       sshHost: connection.sshHost ?? undefined,
@@ -215,9 +222,8 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
       return;
     }
 
-    // Password required for edit mode (original password is masked)
-    if (isEditing && !values.password) {
-      setTestResult(createErrorResult('Please enter the password to test connection'));
+    if (!values.password) {
+      setTestResult(createErrorResult('Please enter a password'));
       return;
     }
 
@@ -239,7 +245,7 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
       const message = error instanceof Error ? error.message : 'Connection failed';
       setTestResult(createErrorResult(message));
     }
-  }, [watch, isEditing, testConnection]);
+  }, [watch, testConnection]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -313,7 +319,7 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder={isEditing ? '••••••••' : 'Enter password'}
+                  placeholder="Enter password"
                   {...register('password')}
                 />
                 <button
@@ -321,7 +327,7 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={togglePassword}
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? <EyeClosed className="size-4" /> : <EyeIcon className="size-4" />}
                 </button>
               </div>
               <FormError message={errors.password?.message} />
@@ -368,7 +374,6 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
               variant="outline"
               onClick={handleTestConnection}
               disabled={testConnection.isPending}
-              className="shrink-0"
             >
               {testConnection.isPending ? (
                 <Loader2Icon className="size-4 animate-spin" />

@@ -43,8 +43,11 @@ function buildConnectionUpdateData(data: ConnectionUpdateData): Record<string, u
   return updateData;
 }
 
-function mapToConnection(row: typeof connections.$inferSelect): Connection {
-  return {
+function mapToConnection(
+  row: typeof connections.$inferSelect,
+  includePassword = false,
+): Connection {
+  const connection: Connection = {
     id: row.id,
     name: row.name,
     type: row.type,
@@ -60,6 +63,12 @@ function mapToConnection(row: typeof connections.$inferSelect): Connection {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+
+  if (includePassword && row.encryptedPassword) {
+    connection.password = decrypt(row.encryptedPassword);
+  }
+
+  return connection;
 }
 
 // Internal function to get decrypted credentials (for actual DB connections)
@@ -81,10 +90,10 @@ export const connectionServerService = {
       .where(eq(connections.userId, userId))
       .orderBy(connections.createdAt);
 
-    return rows.map(mapToConnection);
+    return rows.map((row) => mapToConnection(row));
   },
 
-  async get(id: string, userId: string): Promise<Connection | null> {
+  async get(id: string, userId: string, includePassword = false): Promise<Connection | null> {
     const rows = await db
       .select()
       .from(connections)
@@ -96,7 +105,7 @@ export const connectionServerService = {
       return null;
     }
 
-    return mapToConnection(row);
+    return mapToConnection(row, includePassword);
   },
 
   // Get connection with decrypted credentials (for actual DB operations)

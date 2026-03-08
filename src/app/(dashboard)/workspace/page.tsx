@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ConnectionForm } from '@/components/workspace/connection-form';
 import { useConnections, useDeleteConnection } from '@/hooks/use-connections';
 import type { Connection } from '@/schemas/connection.schema';
+import connectionService from '@/services/connection.service';
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -36,8 +37,10 @@ export default function WorkspacePage() {
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback((connection: Connection) => {
-    setEditingConnection(connection);
+  const handleEdit = useCallback(async (connection: Connection) => {
+    // Fetch connection with password for editing
+    const fullConnection = await connectionService.get(connection.id);
+    setEditingConnection(fullConnection);
     setFormOpen(true);
   }, []);
 
