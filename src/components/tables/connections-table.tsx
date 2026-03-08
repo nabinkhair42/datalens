@@ -2,7 +2,6 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { DatabaseIcon, MoreVerticalIcon, PlusIcon } from 'lucide-react';
-import Link from 'next/link';
 import { memo, useCallback, useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +21,7 @@ export interface ConnectionsTableProps {
   isLoading?: boolean;
   onConnect: (connection: Connection) => void;
   onDelete: (id: string) => void;
+  onCreateNew?: () => void;
 }
 
 function formatDate(dateString: string): string {
@@ -41,6 +41,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
   isLoading,
   onConnect,
   onDelete,
+  onCreateNew,
 }: ConnectionsTableProps): React.ReactElement {
   const handleDelete = useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -102,7 +103,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         size: 50,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon-sm">
                 <MoreVerticalIcon className="size-4" />
               </Button>
@@ -145,14 +146,12 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         icon: <DatabaseIcon className="size-12" />,
         title: 'No connections yet',
         description: 'Create your first database connection to get started',
-        action: (
-          <Button asChild>
-            <Link href="/connections/new">
-              <PlusIcon className="size-4" />
-              New Connection
-            </Link>
+        action: onCreateNew ? (
+          <Button onClick={onCreateNew}>
+            <PlusIcon className="size-4" />
+            New Connection
           </Button>
-        ),
+        ) : undefined,
       }}
     />
   );

@@ -1,10 +1,10 @@
 'use client';
 
 import { PlusIcon } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
+import { ConnectionForm } from '@/components/connections/connection-form';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import type { Connection } from '@/schemas/connection.schema';
 
 export default function WorkspacePage() {
   const router = useRouter();
+  const [formOpen, setFormOpen] = useState(false);
   const { data: connections, isLoading, error } = useConnections();
   const deleteConnection = useDeleteConnection();
 
@@ -30,6 +31,10 @@ export default function WorkspacePage() {
     [deleteConnection],
   );
 
+  const handleOpenForm = useCallback(() => {
+    setFormOpen(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
@@ -41,11 +46,9 @@ export default function WorkspacePage() {
             <h1 className="text-lg font-medium">
               {connections?.length === 1 ? 'Connection' : 'Connections'}
             </h1>
-            <Button size="sm" asChild>
-              <Link href="/connections/new">
-                <PlusIcon className="size-4" />
-                New Connection
-              </Link>
+            <Button size="sm" onClick={handleOpenForm}>
+              <PlusIcon className="size-4" />
+              New Connection
             </Button>
           </div>
 
@@ -60,10 +63,13 @@ export default function WorkspacePage() {
               isLoading={isLoading}
               onConnect={handleConnect}
               onDelete={handleDelete}
+              onCreateNew={handleOpenForm}
             />
           )}
         </div>
       </main>
+
+      <ConnectionForm open={formOpen} onOpenChange={setFormOpen} />
     </div>
   );
 }

@@ -2,13 +2,26 @@
 
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { MySQL, PostgreSQL, SQLite, sql } from '@codemirror/lang-sql';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
-import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
+import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
 import { memo, useCallback, useEffect, useRef } from 'react';
 
 import { cn } from '@/lib/utils';
+
+// Theme-aware syntax highlighting using CSS variables
+const syntaxColors = HighlightStyle.define([
+  { tag: tags.keyword, color: 'var(--syntax-keyword, #7c3aed)' },
+  { tag: tags.string, color: 'var(--syntax-string, #059669)' },
+  { tag: tags.number, color: 'var(--syntax-number, #d97706)' },
+  { tag: tags.comment, color: 'var(--syntax-comment, #6b7280)', fontStyle: 'italic' },
+  { tag: tags.operator, color: 'var(--syntax-operator, #dc2626)' },
+  { tag: tags.function(tags.variableName), color: 'var(--syntax-function, #2563eb)' },
+  { tag: tags.typeName, color: 'var(--syntax-type, #0891b2)' },
+  { tag: tags.propertyName, color: 'var(--syntax-property, #7c3aed)' },
+]);
 
 type DatabaseDialect = 'postgresql' | 'mysql' | 'sqlite';
 
@@ -82,7 +95,7 @@ export const SQLEditor = memo(function SQLEditor({
         upperCaseKeywords: true,
         ...(schema && { schema }),
       }),
-      oneDark,
+      syntaxHighlighting(syntaxColors),
       placeholder(placeholderText),
       EditorView.lineWrapping,
       EditorView.updateListener.of((update) => {
@@ -104,6 +117,8 @@ export const SQLEditor = memo(function SQLEditor({
         '&': {
           height: '100%',
           fontSize: '14px',
+          backgroundColor: 'hsl(var(--background))',
+          color: 'hsl(var(--foreground))',
         },
         '.cm-scroller': {
           overflow: 'auto',
@@ -111,16 +126,31 @@ export const SQLEditor = memo(function SQLEditor({
         },
         '.cm-content': {
           padding: '12px 0',
+          caretColor: 'hsl(var(--foreground))',
         },
         '.cm-line': {
           padding: '0 16px',
         },
         '.cm-gutters': {
-          backgroundColor: 'transparent',
+          backgroundColor: 'hsl(var(--muted))',
+          color: 'hsl(var(--muted-foreground))',
           border: 'none',
+          borderRight: '1px solid hsl(var(--border))',
         },
         '.cm-activeLineGutter': {
-          backgroundColor: 'transparent',
+          backgroundColor: 'hsl(var(--accent))',
+        },
+        '.cm-activeLine': {
+          backgroundColor: 'hsl(var(--accent) / 0.5)',
+        },
+        '.cm-selectionBackground': {
+          backgroundColor: 'hsl(var(--primary) / 0.2) !important',
+        },
+        '.cm-cursor': {
+          borderLeftColor: 'hsl(var(--foreground))',
+        },
+        '.cm-placeholder': {
+          color: 'hsl(var(--muted-foreground))',
         },
       }),
     ];
