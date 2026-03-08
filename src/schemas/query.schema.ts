@@ -18,6 +18,8 @@ export const executeQuerySchema = z.object({
     .max(QUERY_LIMITS.MAX_TIMEOUT_MS)
     .default(QUERY_LIMITS.DEFAULT_TIMEOUT_MS)
     .optional(),
+  // Skip recording this query in history (for automatic queries like table data fetching)
+  skipHistory: z.boolean().default(false).optional(),
 });
 
 export type ExecuteQueryFormData = z.infer<typeof executeQuerySchema>;

@@ -3,7 +3,7 @@
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { MySQL, PostgreSQL, SQLite, sql } from '@codemirror/lang-sql';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
@@ -103,15 +103,18 @@ export const SQLEditor = memo(function SQLEditor({
           onChangeRef.current(update.state.doc.toString());
         }
       }),
-      keymap.of([
-        ...defaultKeymap,
-        ...historyKeymap,
-        {
-          key: 'Mod-Enter',
-          run: executeQuery,
-        },
-      ]),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
       history(),
+      // Use highest precedence for execute shortcut to ensure it's not overridden
+      Prec.highest(
+        keymap.of([
+          {
+            key: 'Mod-Enter',
+            run: executeQuery,
+            preventDefault: true,
+          },
+        ]),
+      ),
       EditorState.readOnly.of(readOnly),
       EditorView.theme({
         '&': {
@@ -151,6 +154,56 @@ export const SQLEditor = memo(function SQLEditor({
         },
         '.cm-placeholder': {
           color: 'hsl(var(--muted-foreground))',
+        },
+        // Autocomplete tooltip styles
+        '.cm-tooltip': {
+          backgroundColor: 'hsl(var(--popover))',
+          color: 'hsl(var(--popover-foreground))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: 'calc(var(--radius) - 2px)',
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        },
+        '.cm-tooltip-autocomplete': {
+          '& > ul': {
+            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+            fontSize: '13px',
+            maxHeight: '200px',
+          },
+          '& > ul > li': {
+            padding: '6px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          },
+          '& > ul > li[aria-selected="true"]': {
+            backgroundColor: 'hsl(var(--primary))',
+            color: 'hsl(var(--primary-foreground))',
+          },
+        },
+        '.cm-completionIcon': {
+          fontSize: '14px',
+          opacity: 0.7,
+        },
+        '.cm-completionLabel': {
+          flex: 1,
+        },
+        '.cm-completionDetail': {
+          fontSize: '12px',
+          color: 'hsl(var(--muted-foreground))',
+          marginLeft: 'auto',
+        },
+        // Hover tooltips and info panels
+        '.cm-tooltip-hover': {
+          padding: '8px 12px',
+        },
+        '.cm-diagnostic': {
+          padding: '4px 8px',
+        },
+        '.cm-diagnostic-error': {
+          borderLeft: '3px solid hsl(var(--destructive))',
+        },
+        '.cm-diagnostic-warning': {
+          borderLeft: '3px solid hsl(var(--chart-4))',
         },
       }),
     ];

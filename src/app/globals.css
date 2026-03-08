@@ -149,3 +149,67 @@
     @apply font-sans;
   }
 }
+
+/* CodeMirror autocomplete tooltip - uses @layer for proper cascade ordering */
+@layer components {
+  /* Base tooltip styles with high specificity */
+  .cm-tooltip.cm-tooltip {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .cm-tooltip-autocomplete > ul {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    max-height: 200px;
+  }
+
+  .cm-tooltip-autocomplete > ul > li.cm-completionMatchedText,
+  .cm-tooltip-autocomplete > ul > li {
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px;
+    margin: 2px 4px;
+  }
+
+  .cm-tooltip-autocomplete > ul > li[aria-selected="true"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .cm-completionIcon {
+    font-size: 14px;
+    opacity: 0.7;
+  }
+
+  .cm-completionLabel {
+    flex: 1;
+  }
+
+  .cm-completionDetail {
+    font-size: 12px;
+    color: var(--muted-foreground);
+    margin-left: auto;
+  }
+
+  /* Dark mode styles with doubled selector for higher specificity */
+  .dark .cm-tooltip.cm-tooltip,
+  :root.dark .cm-tooltip.cm-tooltip {
+    background-color: oklch(0.205 0 0);
+    color: oklch(0.985 0 0);
+    border-color: oklch(1 0 0 / 10%);
+  }
+
+  .dark .cm-tooltip-autocomplete > ul > li[aria-selected="true"],
+  :root.dark .cm-tooltip-autocomplete > ul > li[aria-selected="true"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}

@@ -61,12 +61,14 @@ export default function TablesPage({ params }: TablesPageProps) {
         const result = await executeQuery.mutateAsync({
           connectionId,
           query: `SELECT * FROM "${schema}"."${table}" LIMIT ${pageSize} OFFSET ${offset}`,
+          skipHistory: true,
         });
 
         // Get total count
         const countResult = await executeQuery.mutateAsync({
           connectionId,
           query: `SELECT COUNT(*) as count FROM "${schema}"."${table}"`,
+          skipHistory: true,
         });
 
         const totalRows =

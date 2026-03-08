@@ -51,7 +51,6 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         header: 'Name',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <DatabaseIcon className="size-4 text-primary" />
             <span className="font-medium">{row.original.name}</span>
           </div>
         ),
@@ -95,16 +94,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
-              <span
-                className="group/button inline-flex shrink-0 items-center justify-center border border-input bg-background p-0 text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                style={{
-                  borderRadius: '0.375rem',
-                  width: '2rem',
-                  height: '2rem',
-                }}
-              >
-                <MoreVerticalIcon className="size-4" />
-              </span>
+              <MoreVerticalIcon className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem

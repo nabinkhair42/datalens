@@ -81,6 +81,12 @@ export function useTestConnection() {
   });
 }
 
+export function useTestNewConnection() {
+  return useMutation({
+    mutationFn: (data: ConnectionFormData) => connectionService.testNew(data),
+  });
+}
+
 export function useConnectionSchema(connectionId: string) {
   return useQuery({
     queryKey: [...QUERY_KEYS.CONNECTION(connectionId), 'schema'],

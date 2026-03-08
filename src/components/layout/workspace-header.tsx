@@ -8,10 +8,11 @@ import {
   TerminalSquareIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { memo, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { DATABASE_TYPE_LABELS } from '@/config/constants';
 import { useConnection, useConnections } from '@/hooks/use-connections';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,11 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
   const pathname = usePathname();
   const { data: connection, isLoading } = useConnection(connectionId);
   const { data: connections } = useConnections();
+  const router = useRouter();
+
+  const navigateTo = (href: string) => {
+    router.push(href);
+  };
 
   // Move useMemo before early returns to follow Rules of Hooks
   const navItems = useMemo(
@@ -141,16 +146,18 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
-              <Button key={item.href} variant={isActive ? 'secondary' : 'ghost'} size="sm" asChild>
-                <Link href={item.href} className="flex items-center gap-2">
+              <ButtonGroup key={item.href}>
+                <Button
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  onClick={() => navigateTo(item.href)}
+                >
                   <item.icon className="size-4" />
                   {item.label}
-                </Link>
-              </Button>
+                </Button>
+              </ButtonGroup>
             );
           })}
         </nav>
-        <ThemeToggle />
       </div>
     </header>
   );

@@ -139,6 +139,78 @@ function mapToSavedQuery(row: typeof savedQueries.$inferSelect): SavedQuery {
   };
 }
 
+// Helper to record query in history
+async function recordQueryHistory(params: {
+  connectionId: string;
+  userId: string;
+  query: string;
+  executionTime: number;
+  rowCount: number;
+  success: boolean;
+  error: string | null;
+}) {
+  await db.insert(queryHistory).values({
+    id: generateId(),
+    connectionId: params.connectionId,
+    userId: params.userId,
+    query: params.query,
+    executionTime: params.executionTime,
+    rowCount: params.rowCount,
+    success: params.success,
+    error: params.error,
+    executedAt: new Date(),
+  });
+}
+
+// Helper to build connection config
+function buildConnectionConfig(connection: typeof connections.$inferSelect): ConnectionConfig {
+  return {
+    id: connection.id,
+    type: connection.type as 'postgresql' | 'mysql' | 'sqlite',
+    host: connection.host,
+    port: connection.port,
+    database: connection.database,
+    username: connection.username,
+    password: decrypt(connection.encryptedPassword),
+    ssl: connection.ssl ?? false,
+  };
+}
+
+// Helper to validate and check query safety
+function validateAndLogQuery(queryId: string, connectionId: string, query: string): void {
+  const validation = validateQuery(query);
+
+  if (validation.blocked) {
+    queryLogger.blocked(queryId, connectionId, validation.message ?? 'Unknown reason');
+    throw new Error(validation.message);
+  }
+
+  if (validation.warning) {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        event: 'query_warning',
+        queryId,
+        connectionId,
+        warning: validation.warning,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  }
+}
+
+// Helper to extract error details
+function extractErrorDetails(
+  error: unknown,
+  startTime: number,
+): { message: string; executionTime: number } {
+  if (error instanceof QueryExecutionError) {
+    return { message: error.message, executionTime: error.executionTime };
+  }
+  const message = error instanceof Error ? error.message : 'Query execution failed';
+  return { message, executionTime: Date.now() - startTime };
+}
+
 export const queryServerService = {
   async execute(data: ExecuteQueryFormData, userId: string): Promise<QueryResult> {
     const queryId = generateId();
@@ -155,99 +227,49 @@ export const queryServerService = {
       throw new Error('Connection not found');
     }
 
-    // Validate query for dangerous DDL operations
-    const validation = validateQuery(data.query);
-    if (validation.blocked) {
-      queryLogger.blocked(queryId, data.connectionId, validation.message ?? 'Unknown reason');
-      throw new Error(validation.message);
-    }
-
-    // Log warning for DELETE operations (but allow them)
-    if (validation.warning) {
-      console.log(
-        JSON.stringify({
-          level: 'warn',
-          event: 'query_warning',
-          queryId,
-          connectionId: data.connectionId,
-          warning: validation.warning,
-          timestamp: new Date().toISOString(),
-        }),
-      );
-    }
-
-    // Log query start
+    // Validate query safety (throws if blocked)
+    validateAndLogQuery(queryId, data.connectionId, data.query);
     queryLogger.start(queryId, data.connectionId, data.query);
 
-    let result: QueryResult;
-    let success = true;
-    let errorMessage: string | null = null;
-    let executionTime = 0;
-
     try {
-      // Build connection config with decrypted password
-      const config: ConnectionConfig = {
-        id: connection.id,
-        type: connection.type as 'postgresql' | 'mysql' | 'sqlite',
-        host: connection.host,
-        port: connection.port,
-        database: connection.database,
-        username: connection.username,
-        password: decrypt(connection.encryptedPassword),
-        ssl: connection.ssl ?? false,
-      };
-
-      // Get the database adapter and execute query
+      const config = buildConnectionConfig(connection);
       const adapter = await getAdapter(config);
-      result = await adapter.executeQuery(data.query);
-      executionTime = result.executionTime ?? 0;
+      const result = await adapter.executeQuery(data.query);
+      const executionTime = result.executionTime ?? 0;
 
-      // Log success
       queryLogger.success(queryId, data.connectionId, executionTime, result.rowCount ?? 0);
-    } catch (error) {
-      success = false;
-      if (error instanceof QueryExecutionError) {
-        errorMessage = error.message;
-        executionTime = error.executionTime;
-      } else {
-        errorMessage = error instanceof Error ? error.message : 'Query execution failed';
-        executionTime = Date.now() - startTime;
+
+      if (!data.skipHistory) {
+        await recordQueryHistory({
+          connectionId: data.connectionId,
+          userId,
+          query: data.query,
+          executionTime,
+          rowCount: result.rowCount ?? 0,
+          success: true,
+          error: null,
+        });
       }
 
-      // Log failure
-      queryLogger.failure(queryId, data.connectionId, executionTime, errorMessage);
+      return result;
+    } catch (error) {
+      const { message, executionTime } = extractErrorDetails(error, startTime);
+      queryLogger.failure(queryId, data.connectionId, executionTime, message);
 
-      // Re-throw to propagate error to client
-      // Record in history first
-      await db.insert(queryHistory).values({
-        id: generateId(),
-        connectionId: data.connectionId,
-        userId,
-        query: data.query,
-        executionTime,
-        rowCount: 0,
-        success,
-        error: errorMessage,
-        executedAt: new Date(),
-      });
+      if (!data.skipHistory) {
+        await recordQueryHistory({
+          connectionId: data.connectionId,
+          userId,
+          query: data.query,
+          executionTime,
+          rowCount: 0,
+          success: false,
+          error: message,
+        });
+      }
 
-      throw new Error(errorMessage);
+      throw new Error(message);
     }
-
-    // Record successful query in history
-    await db.insert(queryHistory).values({
-      id: generateId(),
-      connectionId: data.connectionId,
-      userId,
-      query: data.query,
-      executionTime,
-      rowCount: result.rowCount ?? 0,
-      success,
-      error: errorMessage,
-      executedAt: new Date(),
-    });
-
-    return result;
   },
 
   async getHistory(

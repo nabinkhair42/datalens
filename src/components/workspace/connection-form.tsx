@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { CheckCircle2Icon, Loader2Icon, XCircleIcon, ZapIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -29,7 +30,11 @@ import {
   type DatabaseType,
   DEFAULT_PORTS,
 } from '@/config/constants';
-import { useCreateConnection, useUpdateConnection } from '@/hooks/use-connections';
+import {
+  useCreateConnection,
+  useTestNewConnection,
+  useUpdateConnection,
+} from '@/hooks/use-connections';
 import type { Connection } from '@/schemas/connection.schema';
 import { connectionSchema } from '@/schemas/connection.schema';
 import { SSHConfigFields } from './ssh-config-fields';
@@ -66,6 +71,35 @@ const EMPTY_DEFAULT_VALUES: ConnectionFormValues = {
 // js-hoist-regexp: Hoist static values outside component
 const DATABASE_TYPE_ENTRIES = Object.entries(DATABASE_TYPE_LABELS);
 
+// Helper type for test result state
+type TestResultState = {
+  success: boolean;
+  message: string;
+  latency?: number;
+  version?: string;
+} | null;
+
+// Helper to create error result
+const createErrorResult = (message: string): TestResultState => ({
+  success: false,
+  message,
+});
+
+// Helper to create success result
+const createSuccessResult = (latency?: number, version?: string): TestResultState => {
+  const result: NonNullable<TestResultState> = {
+    success: true,
+    message: 'Connection successful',
+  };
+  if (latency !== undefined) {
+    result.latency = latency;
+  }
+  if (version !== undefined) {
+    result.version = version;
+  }
+  return result;
+};
+
 const getDefaultValues = (connection?: Connection): ConnectionFormValues => {
   if (connection) {
     return {
@@ -89,9 +123,11 @@ const getDefaultValues = (connection?: Connection): ConnectionFormValues => {
 export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFormProps) {
   const isEditing = !!connection;
   const [showPassword, setShowPassword] = useState(false);
+  const [testResult, setTestResult] = useState<TestResultState>(null);
 
   const createConnection = useCreateConnection();
   const updateConnection = useUpdateConnection();
+  const testConnection = useTestNewConnection();
 
   // rerender-memo-with-default-value: Memoize default values computation
   const defaultValues = useMemo(() => getDefaultValues(connection), [connection]);
@@ -111,6 +147,7 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
   useEffect(() => {
     if (open) {
       reset(getDefaultValues(connection));
+      setTestResult(null);
     }
   }, [open, connection, reset]);
 
@@ -143,7 +180,10 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
         };
 
         if (isEditing && connection) {
-          await updateConnection.mutateAsync({ id: connection.id, data: formData });
+          await updateConnection.mutateAsync({
+            id: connection.id,
+            data: formData,
+          });
         } else {
           await createConnection.mutateAsync(formData);
         }
@@ -158,12 +198,48 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
 
   const handleClose = useCallback(() => {
     reset();
+    setTestResult(null);
     onOpenChange(false);
   }, [reset, onOpenChange]);
 
   const togglePassword = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
+
+  const handleTestConnection = useCallback(async () => {
+    const values = watch();
+
+    // Validate required fields
+    if (!values.host || !values.database || !values.username) {
+      setTestResult(createErrorResult('Please fill in host, database, and username fields'));
+      return;
+    }
+
+    // Password required for edit mode (original password is masked)
+    if (isEditing && !values.password) {
+      setTestResult(createErrorResult('Please enter the password to test connection'));
+      return;
+    }
+
+    setTestResult(null);
+
+    try {
+      const result = await testConnection.mutateAsync({
+        ...values,
+        ssl: values.ssl ?? true,
+        sshEnabled: values.sshEnabled ?? false,
+      });
+
+      setTestResult(
+        result.success
+          ? createSuccessResult(result.latency, result.version)
+          : createErrorResult('Connection failed'),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Connection failed';
+      setTestResult(createErrorResult(message));
+    }
+  }, [watch, isEditing, testConnection]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -265,7 +341,42 @@ export function ConnectionForm({ open, onOpenChange, connection }: ConnectionFor
 
           {sshEnabled && <SSHConfigFields register={register} />}
 
+          {/* Test Connection */}
+          {testResult && (
+            <div
+              className={`flex flex-1 items-center gap-2 text-sm ${
+                testResult.success ? 'text-green-600 dark:text-green-400' : 'text-destructive'
+              }`}
+            >
+              {testResult.success ? (
+                <CheckCircle2Icon className="size-4 shrink-0" />
+              ) : (
+                <XCircleIcon className="size-4 shrink-0" />
+              )}
+              <span className="flex-1 truncate">{testResult.message}</span>
+              {testResult.success && testResult.latency && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {testResult.latency}ms
+                </span>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={testConnection.isPending}
+              className="shrink-0"
+            >
+              {testConnection.isPending ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <ZapIcon className="size-4" />
+              )}
+              {testConnection.isPending ? 'Testing...' : 'Test Connection'}
+            </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
