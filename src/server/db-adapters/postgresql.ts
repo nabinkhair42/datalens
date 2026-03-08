@@ -17,9 +17,9 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       user: config.username,
       password: config.password,
       ssl: config.ssl ? { rejectUnauthorized: false } : false,
-      max: 5, // Maximum connections in pool
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 5,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000,
     });
   }
 
@@ -41,29 +41,25 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
 
   async executeQuery(query: string): Promise<QueryResult> {
     const startTime = Date.now();
-    const QUERY_TIMEOUT_MS = 30000; // 30 seconds
+    const QUERY_TIMEOUT_MS = 30000;
     let client: pg.PoolClient | null = null;
 
     try {
       client = await this.pool.connect();
 
-      // Create a timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
           reject(new Error('Query timeout: execution exceeded 30 seconds'));
         }, QUERY_TIMEOUT_MS);
       });
 
-      // Race the query against the timeout
       const result = await Promise.race([client.query(query), timeoutPromise]);
-
       const executionTime = Date.now() - startTime;
 
-      // Map column metadata
       const columns: QueryColumn[] = result.fields.map((field) => ({
         name: field.name,
         type: this.mapPostgresType(field.dataTypeID),
-        nullable: true, // PostgreSQL doesn't expose this in result metadata
+        nullable: true,
       }));
 
       return {
@@ -76,7 +72,6 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       const executionTime = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Query execution failed';
 
-      // Check if this is a timeout error
       if (message.includes('Query timeout')) {
         throw new QueryExecutionError(message, executionTime);
       }
@@ -93,7 +88,6 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     const client = await this.pool.connect();
 
     try {
-      // Get all schemas (excluding system schemas)
       const schemasResult = await client.query(`
         SELECT schema_name
         FROM information_schema.schemata
@@ -119,7 +113,6 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
   }
 
   private async getTablesForSchema(client: pg.PoolClient, schema: string): Promise<TableInfo[]> {
-    // Get tables in schema
     const tablesResult = await client.query(
       `
       SELECT
@@ -214,7 +207,6 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     await this.pool.end();
   }
 
-  // Map PostgreSQL OID to human-readable type name
   private mapPostgresType(oid: number): string {
     const typeMap: Record<number, string> = {
       16: 'boolean',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 import { QUERY_KEYS, ROUTES } from '@/config/constants';
@@ -25,54 +25,36 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+// Simplified: directly use better-auth session without redundant useQuery wrapper
 export function useSession() {
   const { data, isPending, error } = useBetterAuthSession();
 
-  return useQuery({
-    queryKey: QUERY_KEYS.USER_PROFILE,
-    queryFn: async (): Promise<AuthSession | null> => {
-      if (!data?.session || !data?.user) {
-        return null;
-      }
-      return {
-        session: {
-          id: data.session.id,
-          userId: data.session.userId,
-          expiresAt: new Date(data.session.expiresAt),
-        },
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.name,
-          image: data.user.image,
-          emailVerified: data.user.emailVerified,
-          createdAt: new Date(data.user.createdAt),
-          updatedAt: new Date(data.user.updatedAt),
-        },
-      };
-    },
-    enabled: !isPending && !error,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    initialData:
-      data?.session && data?.user
-        ? {
-            session: {
-              id: data.session.id,
-              userId: data.session.userId,
-              expiresAt: new Date(data.session.expiresAt),
-            },
-            user: {
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.name,
-              image: data.user.image,
-              emailVerified: data.user.emailVerified,
-              createdAt: new Date(data.user.createdAt),
-              updatedAt: new Date(data.user.updatedAt),
-            },
-          }
-        : undefined,
-  });
+  // Transform to our AuthSession type
+  const session: AuthSession | null =
+    data?.session && data?.user
+      ? {
+          session: {
+            id: data.session.id,
+            userId: data.session.userId,
+            expiresAt: new Date(data.session.expiresAt),
+          },
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            image: data.user.image,
+            emailVerified: data.user.emailVerified,
+            createdAt: new Date(data.user.createdAt),
+            updatedAt: new Date(data.user.updatedAt),
+          },
+        }
+      : null;
+
+  return {
+    data: session,
+    isLoading: isPending,
+    error,
+  };
 }
 
 export function useLogout() {

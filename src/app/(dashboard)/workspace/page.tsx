@@ -2,7 +2,7 @@
 
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,12 @@ export default function WorkspacePage() {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
 
-  // Pagination state - hoisted default values (rerender-memo-with-default-value pattern)
   const paginationParams = useMemo<PaginationParams>(
     () => ({
       page: 1,
-      limit: 50, // Fetch more for client-side pagination in DataTable
+      limit: 50,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     }),
@@ -50,11 +50,13 @@ export default function WorkspacePage() {
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback(async (connection: Connection) => {
-    // Fetch connection with password for editing
-    const fullConnection = await connectionService.get(connection.id);
-    setEditingConnection(fullConnection);
-    setFormOpen(true);
+  // Use transition to avoid blocking UI while fetching
+  const handleEdit = useCallback((connection: Connection) => {
+    startTransition(async () => {
+      const fullConnection = await connectionService.get(connection.id);
+      setEditingConnection(fullConnection);
+      setFormOpen(true);
+    });
   }, []);
 
   const handleFormClose = useCallback((open: boolean) => {
@@ -70,7 +72,6 @@ export default function WorkspacePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="space-y-4">
-          {/* Header */}
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-medium">
               {paginatedData?.pagination.total === 1 ? 'Connection' : 'Connections'}
@@ -86,7 +87,6 @@ export default function WorkspacePage() {
             </Button>
           </div>
 
-          {/* Error State */}
           {error ? (
             <div className="py-12 text-center">
               <p className="text-destructive">Failed to load connections</p>
@@ -94,7 +94,7 @@ export default function WorkspacePage() {
           ) : (
             <ConnectionsTable
               data={connections ?? []}
-              isLoading={isLoading}
+              isLoading={isLoading || isPending}
               onConnect={handleConnect}
               onEdit={handleEdit}
               onDelete={handleDelete}

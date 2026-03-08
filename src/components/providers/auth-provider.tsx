@@ -14,11 +14,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// rerender-memo-with-default-value: Hoist static array outside component
 const PUBLIC_PATHS = ['/', '/login'] as const;
 
 function isPublicPath(pathname: string): boolean {
-  // Exact match for root, startsWith for others
   return PUBLIC_PATHS.some((path) => (path === '/' ? pathname === '/' : pathname.startsWith(path)));
 }
 
@@ -28,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
   const searchParams = useSearchParams();
   const { data: session, isLoading } = useSession();
 
-  // rerender-derived-state: Derive boolean from session
   const isAuthenticated = !!session?.user;
 
   useEffect(() => {
@@ -44,13 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
     }
 
     if (isAuthenticated && pathname === '/login') {
-      // Use the callbackUrl from search params, or default to /workspace
       const callbackUrl = searchParams.get('callbackUrl') || '/workspace';
       router.push(callbackUrl);
     }
   }, [isAuthenticated, isLoading, pathname, router, searchParams]);
 
-  // rerender-memo-with-default-value: Memoize context value to prevent re-renders
   const contextValue = useMemo<AuthContextType>(
     () => ({
       session,

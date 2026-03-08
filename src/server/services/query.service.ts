@@ -13,10 +13,9 @@ import type {
 import { getAdapter, QueryExecutionError } from '@/server/db-adapters';
 import { getCachedConnectionConfig } from '@/server/services/connection.service';
 
-// Blocked DDL keywords that could modify database structure or permissions
+// Blocked DDL keywords
 const BLOCKED_KEYWORDS = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'GRANT', 'REVOKE'] as const;
 
-// Logger utility for structured query logging
 const queryLogger = {
   start: (queryId: string, connectionId: string, queryPreview: string) => {
     console.log(
@@ -70,16 +69,10 @@ const queryLogger = {
   },
 };
 
-/**
- * Validates a query for dangerous DDL operations.
- * Returns an error message if the query is blocked, or a warning message for DELETE operations.
- */
 function validateQuery(query: string): { blocked: boolean; message?: string; warning?: string } {
   const normalizedQuery = query.trim().toUpperCase();
 
-  // Check if query starts with or contains blocked keywords as standalone words
   for (const keyword of BLOCKED_KEYWORDS) {
-    // Check if query starts with the keyword
     if (
       normalizedQuery.startsWith(`${keyword} `) ||
       normalizedQuery.startsWith(`${keyword}\n`) ||
@@ -91,8 +84,6 @@ function validateQuery(query: string): { blocked: boolean; message?: string; war
       };
     }
 
-    // Check if the keyword appears as a standalone word (not part of another word)
-    // Using word boundary pattern: space/newline/tab before and after
     const keywordPattern = new RegExp(`(^|\\s|;)${keyword}(\\s|;|$)`, 'i');
     if (keywordPattern.test(query)) {
       return {
@@ -102,7 +93,6 @@ function validateQuery(query: string): { blocked: boolean; message?: string; war
     }
   }
 
-  // Check for DELETE operations - allow but with warning
   const deletePattern = /(\s|^|;)DELETE(\s|;|$)/i;
   if (deletePattern.test(query)) {
     return {
@@ -139,7 +129,6 @@ function mapToSavedQuery(row: typeof savedQueries.$inferSelect): SavedQuery {
   };
 }
 
-// Helper to record query in history
 async function recordQueryHistory(params: {
   connectionId: string;
   userId: string;
@@ -162,7 +151,6 @@ async function recordQueryHistory(params: {
   });
 }
 
-// Helper to validate and check query safety
 function validateAndLogQuery(queryId: string, connectionId: string, query: string): void {
   const validation = validateQuery(query);
 
@@ -185,7 +173,6 @@ function validateAndLogQuery(queryId: string, connectionId: string, query: strin
   }
 }
 
-// Helper to extract error details
 function extractErrorDetails(
   error: unknown,
   startTime: number,
@@ -202,14 +189,12 @@ export const queryServerService = {
     const queryId = generateId();
     const startTime = Date.now();
 
-    // server-cache-lru: Use cached connection config for faster lookups
     const config = await getCachedConnectionConfig(data.connectionId, userId);
 
     if (!config) {
       throw new Error('Connection not found');
     }
 
-    // Validate query safety (throws if blocked)
     validateAndLogQuery(queryId, data.connectionId, data.query);
     queryLogger.start(queryId, data.connectionId, data.query);
 

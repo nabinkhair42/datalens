@@ -15,33 +15,24 @@ import { type ConnectionConfig, createAdapter } from '@/server/db-adapters';
 
 type ConnectionUpdateData = { [K in keyof ConnectionFormData]?: ConnectionFormData[K] | undefined };
 
-/**
- * server-cache-lru: Cross-request LRU cache for connection configs
- * Caches decrypted connection configs for 2 minutes to avoid repeated
- * database lookups and decryption for the same connection across requests
- */
+// LRU cache for connection configs (2 min TTL)
 const connectionConfigCache = new LRUCache<string, ConnectionConfig>({
   max: 100,
-  ttl: 2 * 60 * 1000, // 2 minutes TTL
+  ttl: 2 * 60 * 1000,
 });
 
-/**
- * Get cached connection config or fetch from database
- * Uses composite key: connectionId:userId for security isolation
- */
+// Get cached connection config or fetch from database
 export async function getCachedConnectionConfig(
   connectionId: string,
   userId: string,
 ): Promise<ConnectionConfig | null> {
   const cacheKey = `${connectionId}:${userId}`;
 
-  // Check cache first
   const cached = connectionConfigCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  // Fetch from database
   const rows = await db
     .select()
     .from(connections)
@@ -53,7 +44,6 @@ export async function getCachedConnectionConfig(
     return null;
   }
 
-  // Build and cache the config
   const config: ConnectionConfig = {
     id: row.id,
     type: row.type as 'postgresql' | 'mysql' | 'sqlite',
@@ -69,17 +59,12 @@ export async function getCachedConnectionConfig(
   return config;
 }
 
-/**
- * Invalidate cached connection config (call after update/delete)
- */
+// Invalidate cached connection config
 export function invalidateConnectionCache(connectionId: string, userId: string): void {
-  const cacheKey = `${connectionId}:${userId}`;
-  connectionConfigCache.delete(cacheKey);
+  connectionConfigCache.delete(`${connectionId}:${userId}`);
 }
 
-/**
- * Invalidate all cached configs for a user (call after bulk operations)
- */
+// Invalidate all cached configs for a user
 export function invalidateUserConnectionCache(userId: string): void {
   for (const key of connectionConfigCache.keys()) {
     if (key.endsWith(`:${userId}`)) {
@@ -111,7 +96,6 @@ function buildConnectionUpdateData(data: ConnectionUpdateData): Record<string, u
     }
   }
 
-  // Encrypt sensitive fields
   if (data['password'] !== undefined && data['password']) {
     updateData['encryptedPassword'] = encrypt(data['password']);
   }
@@ -150,7 +134,6 @@ function mapToConnection(
   return connection;
 }
 
-// Internal function to get decrypted credentials (for actual DB connections)
 function getDecryptedCredentials(row: typeof connections.$inferSelect): {
   password: string;
   sshKey: string | null;
@@ -161,12 +144,10 @@ function getDecryptedCredentials(row: typeof connections.$inferSelect): {
   };
 }
 
-// Default pagination values - hoisted outside component (js-hoist-regexp pattern)
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
-// Sort field mapping - hoisted for reuse
 const SORT_FIELD_MAP = {
   name: connections.name,
   type: connections.type,
@@ -175,10 +156,7 @@ const SORT_FIELD_MAP = {
 } as const;
 
 export const connectionServerService = {
-  /**
-   * List connections with pagination and search support
-   * Supports server-side filtering, sorting, and pagination
-   */
+  // List connections with pagination and search
   async list(userId: string, params?: PaginationParams): Promise<PaginatedConnections> {
     const page = Math.max(DEFAULT_PAGE, params?.page ?? DEFAULT_PAGE);
     const limit = Math.min(MAX_LIMIT, Math.max(1, params?.limit ?? DEFAULT_LIMIT));
@@ -187,10 +165,8 @@ export const connectionServerService = {
     const sortBy = params?.sortBy ?? 'createdAt';
     const sortOrder = params?.sortOrder ?? 'desc';
 
-    // Build base conditions
     const baseConditions = [eq(connections.userId, userId)];
 
-    // Add search condition if provided
     if (search) {
       const searchPattern = `%${search}%`;
       const searchCondition = or(
@@ -204,12 +180,10 @@ export const connectionServerService = {
     }
 
     const whereCondition = and(...baseConditions);
-
-    // Get sort field
     const sortField = SORT_FIELD_MAP[sortBy] ?? connections.createdAt;
     const orderByClause = sortOrder === 'asc' ? asc(sortField) : desc(sortField);
 
-    // Execute queries in parallel (async-parallel pattern)
+    // Parallel queries for data + count
     const [rows, totalResult] = await Promise.all([
       db
         .select()
@@ -236,9 +210,7 @@ export const connectionServerService = {
     };
   },
 
-  /**
-   * List all connections without pagination (for backward compatibility)
-   */
+  // List all connections without pagination
   async listAll(userId: string): Promise<Connection[]> {
     const rows = await db
       .select()
@@ -264,7 +236,6 @@ export const connectionServerService = {
     return mapToConnection(row, includePassword);
   },
 
-  // Get connection with decrypted credentials (for actual DB operations)
   async getWithCredentials(
     id: string,
     userId: string,
@@ -343,9 +314,7 @@ export const connectionServerService = {
       return null;
     }
 
-    // Invalidate cached connection config after update
     invalidateConnectionCache(id, userId);
-
     return mapToConnection(row);
   },
 
@@ -355,7 +324,6 @@ export const connectionServerService = {
       .where(and(eq(connections.id, id), eq(connections.userId, userId)))
       .returning({ id: connections.id });
 
-    // Invalidate cached connection config after delete
     if (result.length > 0) {
       invalidateConnectionCache(id, userId);
     }
@@ -384,52 +352,72 @@ export const connectionServerService = {
     });
   },
 
-  /**
-   * Test a connection configuration without saving it
-   * Used for validating new connections before creation
-   */
+  // Test connection config (combines test + version in single query for PostgreSQL)
   async testConnectionConfig(
     config: ConnectionConfig,
   ): Promise<{ success: boolean; latency?: number; version?: string; error?: string }> {
     const startTime = Date.now();
 
+    if (config.type === 'postgresql') {
+      return this.testPostgresConnection(config, startTime);
+    }
+
+    return this.testGenericConnection(config, startTime);
+  },
+
+  // PostgreSQL test with version in single round-trip
+  async testPostgresConnection(
+    config: ConnectionConfig,
+    startTime: number,
+  ): Promise<{ success: boolean; latency?: number; version?: string; error?: string }> {
+    const adapter = createAdapter(config);
+
     try {
-      const adapter = createAdapter(config);
-      const result = await adapter.testConnection();
+      const versionResult = await adapter.executeQuery('SELECT version()');
       const latency = Date.now() - startTime;
-
-      if (!result.success) {
-        await adapter.close();
-        return { success: false, latency, error: result.error ?? 'Connection failed' };
-      }
-
-      // Get database version for PostgreSQL
-      let version: string | undefined;
-      if (config.type === 'postgresql') {
-        try {
-          const versionResult = await adapter.executeQuery('SELECT version()');
-          const versionString = versionResult.rows[0]?.['version'] as string | undefined;
-          if (versionString) {
-            // Extract just the version number (e.g., "PostgreSQL 15.4" -> "15.4")
-            const match = versionString.match(/PostgreSQL\s+(\d+\.\d+)/);
-            version = match?.[1] ?? versionString.split(' ')[1];
-          }
-        } catch {
-          // Ignore version fetch errors
-        }
-      }
-
       await adapter.close();
 
-      const response: { success: boolean; latency?: number; version?: string; error?: string } = {
-        success: true,
-        latency,
-      };
-      if (version) {
-        response.version = version;
-      }
-      return response;
+      const versionString = versionResult.rows[0]?.['version'] as string | undefined;
+      const version = this.extractPostgresVersion(versionString);
+
+      return version ? { success: true, latency, version } : { success: true, latency };
     } catch (error) {
+      await adapter.close();
+      return {
+        success: false,
+        latency: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  },
+
+  // Extract PostgreSQL version from version() output
+  extractPostgresVersion(versionString: string | undefined): string | undefined {
+    if (!versionString) {
+      return undefined;
+    }
+    const match = versionString.match(/PostgreSQL\s+(\d+\.\d+)/);
+    return match?.[1] ?? versionString.split(' ')[1];
+  },
+
+  // Generic connection test for non-PostgreSQL databases
+  async testGenericConnection(
+    config: ConnectionConfig,
+    startTime: number,
+  ): Promise<{ success: boolean; latency?: number; error?: string }> {
+    const adapter = createAdapter(config);
+
+    try {
+      const result = await adapter.testConnection();
+      const latency = Date.now() - startTime;
+      await adapter.close();
+
+      if (!result.success) {
+        return { success: false, latency, error: result.error ?? 'Connection failed' };
+      }
+      return { success: true, latency };
+    } catch (error) {
+      await adapter.close();
       return {
         success: false,
         latency: Date.now() - startTime,

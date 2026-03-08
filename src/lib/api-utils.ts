@@ -20,11 +20,7 @@ export function createErrorResponse(
   return NextResponse.json({ error: message }, { status });
 }
 
-/**
- * server-cache-react: Per-request deduplication of session lookups
- * Multiple calls to getSession within the same request will only
- * execute the auth check once, improving API route latency
- */
+// Per-request deduplication of session lookups
 export const getSession = cache(async () => {
   const headersList = await headers();
   const session = await auth.api.getSession({
