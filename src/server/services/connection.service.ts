@@ -1,10 +1,15 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { connections } from '@/db/schema';
 import { generateId } from '@/lib/api-utils';
 import { decrypt, encrypt } from '@/lib/encryption';
-import type { Connection, ConnectionFormData } from '@/schemas/connection.schema';
+import type {
+  Connection,
+  ConnectionFormData,
+  PaginatedConnections,
+  PaginationParams,
+} from '@/schemas/connection.schema';
 import { type ConnectionConfig, createAdapter } from '@/server/db-adapters';
 
 type ConnectionUpdateData = { [K in keyof ConnectionFormData]?: ConnectionFormData[K] | undefined };
@@ -82,13 +87,90 @@ function getDecryptedCredentials(row: typeof connections.$inferSelect): {
   };
 }
 
+// Default pagination values - hoisted outside component (js-hoist-regexp pattern)
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 100;
+
+// Sort field mapping - hoisted for reuse
+const SORT_FIELD_MAP = {
+  name: connections.name,
+  type: connections.type,
+  createdAt: connections.createdAt,
+  updatedAt: connections.updatedAt,
+} as const;
+
 export const connectionServerService = {
-  async list(userId: string): Promise<Connection[]> {
+  /**
+   * List connections with pagination and search support
+   * Supports server-side filtering, sorting, and pagination
+   */
+  async list(userId: string, params?: PaginationParams): Promise<PaginatedConnections> {
+    const page = Math.max(DEFAULT_PAGE, params?.page ?? DEFAULT_PAGE);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, params?.limit ?? DEFAULT_LIMIT));
+    const offset = (page - 1) * limit;
+    const search = params?.search?.trim() ?? '';
+    const sortBy = params?.sortBy ?? 'createdAt';
+    const sortOrder = params?.sortOrder ?? 'desc';
+
+    // Build base conditions
+    const baseConditions = [eq(connections.userId, userId)];
+
+    // Add search condition if provided
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const searchCondition = or(
+        ilike(connections.name, searchPattern),
+        ilike(connections.host, searchPattern),
+        ilike(connections.database, searchPattern),
+      );
+      if (searchCondition) {
+        baseConditions.push(searchCondition);
+      }
+    }
+
+    const whereCondition = and(...baseConditions);
+
+    // Get sort field
+    const sortField = SORT_FIELD_MAP[sortBy] ?? connections.createdAt;
+    const orderByClause = sortOrder === 'asc' ? asc(sortField) : desc(sortField);
+
+    // Execute queries in parallel (async-parallel pattern)
+    const [rows, totalResult] = await Promise.all([
+      db
+        .select()
+        .from(connections)
+        .where(whereCondition)
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset),
+      db.select({ count: count() }).from(connections).where(whereCondition),
+    ]);
+
+    const total = totalResult[0]?.count ?? 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: rows.map((row) => mapToConnection(row)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    };
+  },
+
+  /**
+   * List all connections without pagination (for backward compatibility)
+   */
+  async listAll(userId: string): Promise<Connection[]> {
     const rows = await db
       .select()
       .from(connections)
       .where(eq(connections.userId, userId))
-      .orderBy(connections.createdAt);
+      .orderBy(desc(connections.createdAt));
 
     return rows.map((row) => mapToConnection(row));
   },

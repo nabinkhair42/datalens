@@ -4,12 +4,42 @@ import type {
   Connection,
   ConnectionFormData,
   ConnectionTestResult,
+  PaginatedConnections,
+  PaginationParams,
 } from '@/schemas/connection.schema';
 import type { SchemaInfo } from '@/server/db-adapters/types';
 
+function buildQueryString(params?: PaginationParams): string {
+  if (!params) {
+    return '';
+  }
+
+  const searchParams = new URLSearchParams();
+
+  if (params.page !== undefined) {
+    searchParams.set('page', String(params.page));
+  }
+  if (params.limit !== undefined) {
+    searchParams.set('limit', String(params.limit));
+  }
+  if (params.search) {
+    searchParams.set('search', params.search);
+  }
+  if (params.sortBy) {
+    searchParams.set('sortBy', params.sortBy);
+  }
+  if (params.sortOrder) {
+    searchParams.set('sortOrder', params.sortOrder);
+  }
+
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 export const connectionService = {
-  async list(): Promise<Connection[]> {
-    return get<Connection[]>(API_ENDPOINTS.CONNECTIONS.LIST);
+  async list(params?: PaginationParams): Promise<PaginatedConnections> {
+    const queryString = buildQueryString(params);
+    return get<PaginatedConnections>(`${API_ENDPOINTS.CONNECTIONS.LIST}${queryString}`);
   },
 
   async get(id: string): Promise<Connection> {

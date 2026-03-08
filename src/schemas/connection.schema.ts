@@ -69,3 +69,25 @@ export interface ConnectionTestResult {
   version?: string;
   error?: string;
 }
+
+// Pagination types
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: 'name' | 'type' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+export type PaginatedConnections = PaginatedResponse<Connection>;

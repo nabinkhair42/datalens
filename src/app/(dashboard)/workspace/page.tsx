@@ -2,20 +2,33 @@
 
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
 import { ConnectionForm } from '@/components/workspace/connection-form';
 import { useConnections, useDeleteConnection } from '@/hooks/use-connections';
-import type { Connection } from '@/schemas/connection.schema';
+import type { Connection, PaginationParams } from '@/schemas/connection.schema';
 import connectionService from '@/services/connection.service';
 
 export default function WorkspacePage() {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
-  const { data: connections, isLoading, error } = useConnections();
+
+  // Pagination state - hoisted default values (rerender-memo-with-default-value pattern)
+  const paginationParams = useMemo<PaginationParams>(
+    () => ({
+      page: 1,
+      limit: 50, // Fetch more for client-side pagination in DataTable
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }),
+    [],
+  );
+
+  const { data: paginatedData, isLoading, error } = useConnections(paginationParams);
+  const connections = paginatedData?.data;
   const deleteConnection = useDeleteConnection();
 
   const handleConnect = useCallback(
@@ -60,7 +73,12 @@ export default function WorkspacePage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-medium">
-              {connections?.length === 1 ? 'Connection' : 'Connections'}
+              {paginatedData?.pagination.total === 1 ? 'Connection' : 'Connections'}
+              {paginatedData?.pagination.total ? (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({paginatedData.pagination.total})
+                </span>
+              ) : null}
             </h1>
             <Button size="sm" onClick={handleOpenForm}>
               <PlusIcon className="size-4" />

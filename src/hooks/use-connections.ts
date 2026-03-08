@@ -3,13 +3,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { QUERY_KEYS } from '@/config/constants';
-import type { Connection, ConnectionFormData } from '@/schemas/connection.schema';
+import type {
+  Connection,
+  ConnectionFormData,
+  PaginatedConnections,
+  PaginationParams,
+} from '@/schemas/connection.schema';
 import connectionService from '@/services/connection.service';
 
-export function useConnections() {
+/**
+ * Hook for fetching paginated connections list
+ * Supports search, sorting, and pagination
+ */
+export function useConnections(params?: PaginationParams) {
   return useQuery({
-    queryKey: QUERY_KEYS.CONNECTIONS,
-    queryFn: () => connectionService.list(),
+    queryKey: [...QUERY_KEYS.CONNECTIONS, params],
+    queryFn: () => connectionService.list(params),
   });
 }
 
@@ -27,12 +36,25 @@ export function useCreateConnection() {
   return useMutation({
     mutationFn: (data: ConnectionFormData) => connectionService.create(data),
     onSuccess: (newConnection) => {
-      queryClient.setQueryData<Connection[]>(QUERY_KEYS.CONNECTIONS, (old) => {
-        if (!old) {
-          return [newConnection];
-        }
-        return [newConnection, ...old];
-      });
+      // Invalidate all connection list queries to refetch with correct pagination
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONNECTIONS });
+      // Optimistically update the current page cache if it exists
+      queryClient.setQueriesData<PaginatedConnections>(
+        { queryKey: QUERY_KEYS.CONNECTIONS },
+        (old) => {
+          if (!old) {
+            return old;
+          }
+          return {
+            ...old,
+            data: [newConnection, ...old.data],
+            pagination: {
+              ...old.pagination,
+              total: old.pagination.total + 1,
+            },
+          };
+        },
+      );
     },
   });
 }
@@ -44,16 +66,26 @@ export function useUpdateConnection() {
     mutationFn: ({ id, data }: { id: string; data: Partial<ConnectionFormData> }) =>
       connectionService.update(id, data),
     onSuccess: (updatedConnection) => {
+      // Update the individual connection cache
       queryClient.setQueryData<Connection>(
         QUERY_KEYS.CONNECTION(updatedConnection.id),
         updatedConnection,
       );
-      queryClient.setQueryData<Connection[]>(QUERY_KEYS.CONNECTIONS, (old) => {
-        if (!old) {
-          return [updatedConnection];
-        }
-        return old.map((conn) => (conn.id === updatedConnection.id ? updatedConnection : conn));
-      });
+      // Update all paginated list caches
+      queryClient.setQueriesData<PaginatedConnections>(
+        { queryKey: QUERY_KEYS.CONNECTIONS },
+        (old) => {
+          if (!old) {
+            return old;
+          }
+          return {
+            ...old,
+            data: old.data.map((conn) =>
+              conn.id === updatedConnection.id ? updatedConnection : conn,
+            ),
+          };
+        },
+      );
     },
   });
 }
@@ -64,13 +96,27 @@ export function useDeleteConnection() {
   return useMutation({
     mutationFn: (id: string) => connectionService.delete(id),
     onSuccess: (_, deletedId) => {
+      // Remove individual connection query
       queryClient.removeQueries({ queryKey: QUERY_KEYS.CONNECTION(deletedId) });
-      queryClient.setQueryData<Connection[]>(QUERY_KEYS.CONNECTIONS, (old) => {
-        if (!old) {
-          return [];
-        }
-        return old.filter((conn) => conn.id !== deletedId);
-      });
+      // Invalidate all list queries to refetch
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONNECTIONS });
+      // Optimistically update cached pages
+      queryClient.setQueriesData<PaginatedConnections>(
+        { queryKey: QUERY_KEYS.CONNECTIONS },
+        (old) => {
+          if (!old) {
+            return old;
+          }
+          return {
+            ...old,
+            data: old.data.filter((conn) => conn.id !== deletedId),
+            pagination: {
+              ...old.pagination,
+              total: Math.max(0, old.pagination.total - 1),
+            },
+          };
+        },
+      );
     },
   });
 }

@@ -134,6 +134,8 @@ export const ConnectionsTable = memo(function ConnectionsTable({
       isLoading={isLoading ?? false}
       searchPlaceholder="Search connections..."
       enableGlobalFilter
+      enablePagination
+      pageSize={10}
       onRowClick={onConnect}
       emptyState={{
         icon: <DatabaseIcon className="size-12" />,

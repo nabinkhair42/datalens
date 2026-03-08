@@ -33,7 +33,8 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
 }: WorkspaceHeaderProps) {
   const pathname = usePathname();
   const { data: connection, isLoading } = useConnection(connectionId);
-  const { data: connections } = useConnections();
+  const { data: paginatedConnections } = useConnections();
+  const connections = paginatedConnections?.data;
   const router = useRouter();
 
   const navigateTo = (href: string) => {
