@@ -19,6 +19,8 @@ export function useConnections(params?: PaginationParams) {
   return useQuery({
     queryKey: [...QUERY_KEYS.CONNECTIONS, params],
     queryFn: () => connectionService.list(params),
+    // client-swr-dedup: Connections list rarely changes, use longer stale time
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
 

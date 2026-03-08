@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
+import { cache } from 'react';
 
 import { auth } from '@/lib/auth';
 
@@ -19,13 +20,18 @@ export function createErrorResponse(
   return NextResponse.json({ error: message }, { status });
 }
 
-export async function getSession() {
+/**
+ * server-cache-react: Per-request deduplication of session lookups
+ * Multiple calls to getSession within the same request will only
+ * execute the auth check once, improving API route latency
+ */
+export const getSession = cache(async () => {
   const headersList = await headers();
   const session = await auth.api.getSession({
     headers: headersList,
   });
   return session;
-}
+});
 
 export function withAuth(
   handler: (req: NextRequest, context: AuthContext) => Promise<NextResponse>,

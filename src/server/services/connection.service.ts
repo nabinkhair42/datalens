@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { LRUCache } from 'lru-cache';
 
 import { db } from '@/db';
 import { connections } from '@/db/schema';
@@ -13,6 +14,79 @@ import type {
 import { type ConnectionConfig, createAdapter } from '@/server/db-adapters';
 
 type ConnectionUpdateData = { [K in keyof ConnectionFormData]?: ConnectionFormData[K] | undefined };
+
+/**
+ * server-cache-lru: Cross-request LRU cache for connection configs
+ * Caches decrypted connection configs for 2 minutes to avoid repeated
+ * database lookups and decryption for the same connection across requests
+ */
+const connectionConfigCache = new LRUCache<string, ConnectionConfig>({
+  max: 100,
+  ttl: 2 * 60 * 1000, // 2 minutes TTL
+});
+
+/**
+ * Get cached connection config or fetch from database
+ * Uses composite key: connectionId:userId for security isolation
+ */
+export async function getCachedConnectionConfig(
+  connectionId: string,
+  userId: string,
+): Promise<ConnectionConfig | null> {
+  const cacheKey = `${connectionId}:${userId}`;
+
+  // Check cache first
+  const cached = connectionConfigCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from database
+  const rows = await db
+    .select()
+    .from(connections)
+    .where(and(eq(connections.id, connectionId), eq(connections.userId, userId)))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+
+  // Build and cache the config
+  const config: ConnectionConfig = {
+    id: row.id,
+    type: row.type as 'postgresql' | 'mysql' | 'sqlite',
+    host: row.host,
+    port: row.port,
+    database: row.database,
+    username: row.username,
+    password: decrypt(row.encryptedPassword),
+    ssl: row.ssl,
+  };
+
+  connectionConfigCache.set(cacheKey, config);
+  return config;
+}
+
+/**
+ * Invalidate cached connection config (call after update/delete)
+ */
+export function invalidateConnectionCache(connectionId: string, userId: string): void {
+  const cacheKey = `${connectionId}:${userId}`;
+  connectionConfigCache.delete(cacheKey);
+}
+
+/**
+ * Invalidate all cached configs for a user (call after bulk operations)
+ */
+export function invalidateUserConnectionCache(userId: string): void {
+  for (const key of connectionConfigCache.keys()) {
+    if (key.endsWith(`:${userId}`)) {
+      connectionConfigCache.delete(key);
+    }
+  }
+}
 
 const DIRECT_UPDATE_FIELDS = [
   'name',
@@ -269,6 +343,9 @@ export const connectionServerService = {
       return null;
     }
 
+    // Invalidate cached connection config after update
+    invalidateConnectionCache(id, userId);
+
     return mapToConnection(row);
   },
 
@@ -277,6 +354,11 @@ export const connectionServerService = {
       .delete(connections)
       .where(and(eq(connections.id, id), eq(connections.userId, userId)))
       .returning({ id: connections.id });
+
+    // Invalidate cached connection config after delete
+    if (result.length > 0) {
+      invalidateConnectionCache(id, userId);
+    }
 
     return result.length > 0;
   },

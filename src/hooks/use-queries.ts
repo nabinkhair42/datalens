@@ -22,6 +22,8 @@ export function useQueryHistory(params?: QueryHistoryParams) {
   return useQuery({
     queryKey: [...QUERY_KEYS.QUERY_HISTORY, params],
     queryFn: () => queryService.getHistory(params),
+    // client-swr-dedup: Stale time reduces refetches for recently loaded history
+    staleTime: 30 * 1000, // 30 seconds
   });
 }
 
@@ -29,6 +31,8 @@ export function useSavedQueries() {
   return useQuery({
     queryKey: QUERY_KEYS.SAVED_QUERIES,
     queryFn: () => queryService.saved.list(),
+    // client-swr-dedup: Saved queries rarely change, use longer stale time
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

@@ -58,18 +58,20 @@ export default function TablesPage({ params }: TablesPageProps) {
       setIsLoadingData(true);
       try {
         const offset = page * pageSize;
-        const result = await executeQuery.mutateAsync({
-          connectionId,
-          query: `SELECT * FROM "${schema}"."${table}" LIMIT ${pageSize} OFFSET ${offset}`,
-          skipHistory: true,
-        });
 
-        // Get total count
-        const countResult = await executeQuery.mutateAsync({
-          connectionId,
-          query: `SELECT COUNT(*) as count FROM "${schema}"."${table}"`,
-          skipHistory: true,
-        });
+        // async-parallel: Execute data and count queries in parallel for 2x improvement
+        const [result, countResult] = await Promise.all([
+          executeQuery.mutateAsync({
+            connectionId,
+            query: `SELECT * FROM "${schema}"."${table}" LIMIT ${pageSize} OFFSET ${offset}`,
+            skipHistory: true,
+          }),
+          executeQuery.mutateAsync({
+            connectionId,
+            query: `SELECT COUNT(*) as count FROM "${schema}"."${table}"`,
+            skipHistory: true,
+          }),
+        ]);
 
         const totalRows =
           countResult.rows[0] && typeof countResult.rows[0]['count'] === 'number'

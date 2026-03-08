@@ -1,9 +1,8 @@
 import { and, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { connections, queryHistory, savedQueries } from '@/db/schema';
+import { queryHistory, savedQueries } from '@/db/schema';
 import { generateId } from '@/lib/api-utils';
-import { decrypt } from '@/lib/encryption';
 import type {
   ExecuteQueryFormData,
   QueryHistoryItem,
@@ -11,7 +10,8 @@ import type {
   SavedQuery,
   SavedQueryFormData,
 } from '@/schemas/query.schema';
-import { type ConnectionConfig, getAdapter, QueryExecutionError } from '@/server/db-adapters';
+import { getAdapter, QueryExecutionError } from '@/server/db-adapters';
+import { getCachedConnectionConfig } from '@/server/services/connection.service';
 
 // Blocked DDL keywords that could modify database structure or permissions
 const BLOCKED_KEYWORDS = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'GRANT', 'REVOKE'] as const;
@@ -162,20 +162,6 @@ async function recordQueryHistory(params: {
   });
 }
 
-// Helper to build connection config
-function buildConnectionConfig(connection: typeof connections.$inferSelect): ConnectionConfig {
-  return {
-    id: connection.id,
-    type: connection.type as 'postgresql' | 'mysql' | 'sqlite',
-    host: connection.host,
-    port: connection.port,
-    database: connection.database,
-    username: connection.username,
-    password: decrypt(connection.encryptedPassword),
-    ssl: connection.ssl ?? false,
-  };
-}
-
 // Helper to validate and check query safety
 function validateAndLogQuery(queryId: string, connectionId: string, query: string): void {
   const validation = validateQuery(query);
@@ -216,14 +202,10 @@ export const queryServerService = {
     const queryId = generateId();
     const startTime = Date.now();
 
-    // Verify the user has access to this connection
-    const [connection] = await db
-      .select()
-      .from(connections)
-      .where(and(eq(connections.id, data.connectionId), eq(connections.userId, userId)))
-      .limit(1);
+    // server-cache-lru: Use cached connection config for faster lookups
+    const config = await getCachedConnectionConfig(data.connectionId, userId);
 
-    if (!connection) {
+    if (!config) {
       throw new Error('Connection not found');
     }
 
@@ -232,7 +214,6 @@ export const queryServerService = {
     queryLogger.start(queryId, data.connectionId, data.query);
 
     try {
-      const config = buildConnectionConfig(connection);
       const adapter = await getAdapter(config);
       const result = await adapter.executeQuery(data.query);
       const executionTime = result.executionTime ?? 0;

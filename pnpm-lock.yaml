@@ -92,6 +92,9 @@ importers:
       hono:
         specifier: ^4.12.5
         version: 4.12.5
+      lru-cache:
+        specifier: ^11.2.6
+        version: 11.2.6
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.3)
