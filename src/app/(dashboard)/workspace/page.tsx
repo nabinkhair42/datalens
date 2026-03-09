@@ -2,7 +2,7 @@
 
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,6 @@ export default function WorkspacePage() {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
-  const [isPending, startTransition] = useTransition();
-
   const paginationParams = useMemo<PaginationParams>(
     () => ({
       page: 1,
@@ -50,13 +48,10 @@ export default function WorkspacePage() {
     setFormOpen(true);
   }, []);
 
-  // Use transition to avoid blocking UI while fetching
-  const handleEdit = useCallback((connection: Connection) => {
-    startTransition(async () => {
-      const fullConnection = await connectionService.get(connection.id);
-      setEditingConnection(fullConnection);
-      setFormOpen(true);
-    });
+  const handleEdit = useCallback(async (connection: Connection) => {
+    const fullConnection = await connectionService.get(connection.id);
+    setEditingConnection(fullConnection);
+    setFormOpen(true);
   }, []);
 
   const handleFormClose = useCallback((open: boolean) => {
@@ -94,7 +89,7 @@ export default function WorkspacePage() {
           ) : (
             <ConnectionsTable
               data={connections ?? []}
-              isLoading={isLoading || isPending}
+              isLoading={isLoading}
               onConnect={handleConnect}
               onEdit={handleEdit}
               onDelete={handleDelete}
