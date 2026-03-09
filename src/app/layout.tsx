@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Suspense } from 'react';
+import { Toaster } from 'sonner';
 
 import { PageLoader } from '@/components/loaders/spinner';
 import { AuthProvider } from '@/components/providers/auth-provider';
@@ -46,6 +47,7 @@ export default function RootLayout({
               <AuthProvider>{children}</AuthProvider>
             </Suspense>
           </QueryProvider>
+          <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>
     </html>

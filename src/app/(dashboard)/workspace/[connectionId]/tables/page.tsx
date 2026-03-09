@@ -1,20 +1,23 @@
 'use client';
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ColumnsIcon,
-  FilterIcon,
-  PlusIcon,
-  RefreshCwIcon,
-} from 'lucide-react';
-import { use, useCallback, useState } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon } from 'lucide-react';
+import { use, useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
-import { TableDataGrid } from '@/components/tables/table-data-grid';
+import { AddRecordDialog, buildInsertQuery } from '@/components/tables/add-record-dialog';
+import { ColumnVisibility } from '@/components/tables/column-visibility';
+import { ExportMenu } from '@/components/tables/export-menu';
+import { type CellEdit, type SortConfig, TableDataGrid } from '@/components/tables/table-data-grid';
+import {
+  buildWhereClause,
+  type TableFilter,
+  TableFilters,
+} from '@/components/tables/table-filters';
 import { Button } from '@/components/ui/button';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
+import type { ColumnInfo } from '@/server/db-adapters/types';
 
 interface TablesPageProps {
   params: Promise<{ connectionId: string }>;
@@ -38,11 +41,13 @@ export default function TablesPage({ params }: TablesPageProps) {
   const [tableData, setTableData] = useState<{
     rows: Record<string, unknown>[];
     columns: string[];
+    columnInfo: ColumnInfo[];
     totalRows: number;
     executionTime?: number | undefined;
   }>({
     rows: [],
     columns: [],
+    columnInfo: [],
     totalRows: 0,
   });
 
@@ -51,60 +56,99 @@ export default function TablesPage({ params }: TablesPageProps) {
     pageSize: 50,
   });
 
+  const [filters, setFilters] = useState<TableFilter[]>([]);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
+  // Helper to extract row count from query result
+  const parseRowCount = useCallback((countResult: { rows: Record<string, unknown>[] }): number => {
+    const countValue = countResult.rows[0]?.['count'];
+    if (typeof countValue === 'number') {
+      return countValue;
+    }
+    if (typeof countValue === 'string') {
+      return parseInt(countValue, 10);
+    }
+    return 0;
+  }, []);
+
   const loadTableData = useCallback(
-    async (schema: string, table: string, page: number, pageSize: number) => {
+    async (
+      schema: string,
+      table: string,
+      page: number,
+      pageSize: number,
+      activeFilters: TableFilter[],
+      activeSort: SortConfig | null,
+    ) => {
       setIsLoadingData(true);
       try {
         const offset = page * pageSize;
+        const whereClause = buildWhereClause(activeFilters);
+        const orderClause = activeSort
+          ? `ORDER BY "${activeSort.column}" ${activeSort.direction.toUpperCase()}`
+          : '';
 
-        // async-parallel: Execute data and count queries in parallel for 2x improvement
+        // async-parallel: Execute data and count queries in parallel
         const [result, countResult] = await Promise.all([
           executeQuery.mutateAsync({
             connectionId,
-            query: `SELECT * FROM "${schema}"."${table}" LIMIT ${pageSize} OFFSET ${offset}`,
+            query: `SELECT * FROM "${schema}"."${table}" ${whereClause} ${orderClause} LIMIT ${pageSize} OFFSET ${offset}`,
             skipHistory: true,
           }),
           executeQuery.mutateAsync({
             connectionId,
-            query: `SELECT COUNT(*) as count FROM "${schema}"."${table}"`,
+            query: `SELECT COUNT(*) as count FROM "${schema}"."${table}" ${whereClause}`,
             skipHistory: true,
           }),
         ]);
 
-        const totalRows =
-          countResult.rows[0] && typeof countResult.rows[0]['count'] === 'number'
-            ? countResult.rows[0]['count']
-            : typeof countResult.rows[0]?.['count'] === 'string'
-              ? parseInt(countResult.rows[0]['count'] as string, 10)
-              : 0;
+        const totalRows = parseRowCount(countResult);
+
+        const columns = result.columns?.map((c) => c.name) || [];
+        const columnInfo: ColumnInfo[] =
+          result.columns?.map((c) => ({
+            name: c.name,
+            type: c.type,
+            nullable: c.nullable ?? true,
+          })) || [];
 
         setTableData({
           rows: result.rows || [],
-          columns: result.columns?.map((c) => c.name) || [],
+          columns,
+          columnInfo,
           totalRows,
           executionTime: result.executionTime,
         });
+
+        // Initialize visible columns when table changes
+        if (visibleColumns.size === 0 || !columns.every((c) => visibleColumns.has(c))) {
+          setVisibleColumns(new Set(columns));
+        }
       } catch (error) {
         console.error('Failed to load table data:', error);
         setTableData({
           rows: [],
           columns: [],
+          columnInfo: [],
           totalRows: 0,
         });
       } finally {
         setIsLoadingData(false);
       }
     },
-    [connectionId, executeQuery],
+    [connectionId, executeQuery, parseRowCount, visibleColumns],
   );
 
   const handleTableSelect = useCallback(
     (schema: string, table: string) => {
       setSelectedTable({ schema, table });
       setPagination({ page: 0, pageSize: 50 });
-      loadTableData(schema, table, 0, 50);
+      setFilters([]);
+      setVisibleColumns(new Set());
+      setSortConfig(null);
+      loadTableData(schema, table, 0, 50, [], null);
     },
     [loadTableData],
   );
@@ -113,10 +157,17 @@ export default function TablesPage({ params }: TablesPageProps) {
     (newPage: number) => {
       if (selectedTable) {
         setPagination((prev) => ({ ...prev, page: newPage }));
-        loadTableData(selectedTable.schema, selectedTable.table, newPage, pagination.pageSize);
+        loadTableData(
+          selectedTable.schema,
+          selectedTable.table,
+          newPage,
+          pagination.pageSize,
+          filters,
+          sortConfig,
+        );
       }
     },
-    [selectedTable, pagination.pageSize, loadTableData],
+    [selectedTable, pagination.pageSize, filters, sortConfig, loadTableData],
   );
 
   const handleRefresh = useCallback(() => {
@@ -126,9 +177,114 @@ export default function TablesPage({ params }: TablesPageProps) {
         selectedTable.table,
         pagination.page,
         pagination.pageSize,
+        filters,
+        sortConfig,
       );
     }
-  }, [selectedTable, pagination, loadTableData]);
+  }, [selectedTable, pagination, filters, sortConfig, loadTableData]);
+
+  const handleFiltersChange = useCallback(
+    (newFilters: TableFilter[]) => {
+      setFilters(newFilters);
+      setPagination((prev) => ({ ...prev, page: 0 }));
+      if (selectedTable) {
+        loadTableData(
+          selectedTable.schema,
+          selectedTable.table,
+          0,
+          pagination.pageSize,
+          newFilters,
+          sortConfig,
+        );
+      }
+    },
+    [selectedTable, pagination.pageSize, sortConfig, loadTableData],
+  );
+
+  const handleSortChange = useCallback(
+    (newSort: SortConfig | null) => {
+      setSortConfig(newSort);
+      setPagination((prev) => ({ ...prev, page: 0 }));
+      if (selectedTable) {
+        loadTableData(
+          selectedTable.schema,
+          selectedTable.table,
+          0,
+          pagination.pageSize,
+          filters,
+          newSort,
+        );
+      }
+    },
+    [selectedTable, pagination.pageSize, filters, loadTableData],
+  );
+
+  const handleInsertRecord = useCallback(
+    async (values: Record<string, string>) => {
+      if (!selectedTable) {
+        return;
+      }
+      const query = buildInsertQuery(selectedTable.schema, selectedTable.table, values);
+      await executeQuery.mutateAsync({ connectionId, query, skipHistory: false });
+      toast.success('Record inserted successfully');
+      handleRefresh();
+    },
+    [selectedTable, connectionId, executeQuery, handleRefresh],
+  );
+
+  const handleCellEdit = useCallback(
+    async (edit: CellEdit) => {
+      if (!selectedTable) {
+        return;
+      }
+
+      // Build WHERE clause from the row data to identify the record
+      // Use all columns to create a unique identifier (in case there's no primary key)
+      const whereConditions = Object.entries(edit.rowData)
+        .filter(([_, value]) => value !== null)
+        .map(([col, value]) => {
+          if (typeof value === 'string') {
+            return `"${col}" = '${value.replace(/'/g, "''")}'`;
+          }
+          if (typeof value === 'number' || typeof value === 'boolean') {
+            return `"${col}" = ${value}`;
+          }
+          return `"${col}" = '${JSON.stringify(value).replace(/'/g, "''")}'`;
+        })
+        .join(' AND ');
+
+      // Format the new value for SQL
+      const formattedValue =
+        edit.newValue === '' || edit.newValue.toLowerCase() === 'null'
+          ? 'NULL'
+          : `'${edit.newValue.replace(/'/g, "''")}'`;
+
+      const query = `UPDATE "${selectedTable.schema}"."${selectedTable.table}" SET "${edit.column}" = ${formattedValue} WHERE ${whereConditions}`;
+
+      try {
+        await executeQuery.mutateAsync({ connectionId, query, skipHistory: false });
+        toast.success('Cell updated successfully');
+        handleRefresh();
+      } catch (error) {
+        toast.error('Failed to update cell');
+        throw error;
+      }
+    },
+    [selectedTable, connectionId, executeQuery, handleRefresh],
+  );
+
+  // Derive column info with additional metadata from schema
+  const tableColumnInfo = useMemo(() => {
+    if (!selectedTable || !schemas) {
+      return tableData.columnInfo;
+    }
+    const schemaData = schemas.find((s) => s.name === selectedTable.schema);
+    const tableInfo = schemaData?.tables.find((t) => t.name === selectedTable.table);
+    if (!tableInfo) {
+      return tableData.columnInfo;
+    }
+    return tableInfo.columns;
+  }, [selectedTable, schemas, tableData.columnInfo]);
 
   const totalPages = Math.ceil(tableData.totalRows / pagination.pageSize);
 
@@ -163,18 +319,27 @@ export default function TablesPage({ params }: TablesPageProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>
-                  <FilterIcon className="size-4" />
-                  Filters
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  <ColumnsIcon className="size-4" />
-                  Columns
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  <PlusIcon className="size-4" />
-                  Add record
-                </Button>
+                <TableFilters
+                  columns={tableData.columns}
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                />
+                <ColumnVisibility
+                  columns={tableData.columns}
+                  visibleColumns={visibleColumns}
+                  onVisibilityChange={setVisibleColumns}
+                />
+                <AddRecordDialog
+                  columns={tableColumnInfo}
+                  onInsert={handleInsertRecord}
+                  disabled={isLoadingData}
+                />
+                <ExportMenu
+                  data={tableData.rows}
+                  columns={tableData.columns}
+                  filename={`${selectedTable.schema}_${selectedTable.table}`}
+                  disabled={isLoadingData}
+                />
 
                 {/* Pagination */}
                 <div className="ml-4 flex items-center gap-2 border-l pl-4">
@@ -219,6 +384,10 @@ export default function TablesPage({ params }: TablesPageProps) {
               <TableDataGrid
                 data={tableData.rows}
                 columns={tableData.columns}
+                visibleColumns={visibleColumns}
+                sortConfig={sortConfig}
+                onSortChange={handleSortChange}
+                onCellEdit={handleCellEdit}
                 isLoading={isLoadingData}
               />
             </div>

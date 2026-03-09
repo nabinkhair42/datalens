@@ -1,33 +1,99 @@
 'use client';
 
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { CopyIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { ArrowDownIcon, ArrowUpIcon, CopyIcon } from 'lucide-react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { TableDataGridSkeleton } from '@/components/loaders';
+import { EditableCell } from '@/components/tables/editable-cell';
 import { cn } from '@/lib/utils';
+
+export interface SortConfig {
+  column: string;
+  direction: 'asc' | 'desc';
+}
+
+export interface CellEdit {
+  rowIndex: number;
+  column: string;
+  oldValue: unknown;
+  newValue: string;
+  rowData: Record<string, unknown>;
+}
 
 interface TableDataGridProps {
   data: Record<string, unknown>[];
   columns: string[];
+  visibleColumns?: Set<string>;
+  sortConfig?: SortConfig | null;
+  onSortChange?: (sort: SortConfig | null) => void;
+  onCellEdit?: (edit: CellEdit) => Promise<void>;
   isLoading?: boolean | undefined;
 }
 
 export const TableDataGrid = memo(function TableDataGrid({
   data,
   columns,
+  visibleColumns,
+  sortConfig,
+  onSortChange,
+  onCellEdit,
   isLoading,
 }: TableDataGridProps) {
+  // Track which cell is currently being edited
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string } | null>(null);
+  // Filter columns by visibility
+  const displayColumns = useMemo(() => {
+    if (!visibleColumns) {
+      return columns;
+    }
+    return columns.filter((col) => visibleColumns.has(col));
+  }, [columns, visibleColumns]);
+
+  const handleSort = useCallback(
+    (column: string) => {
+      if (!onSortChange) {
+        return;
+      }
+      if (sortConfig?.column === column) {
+        if (sortConfig.direction === 'asc') {
+          onSortChange({ column, direction: 'desc' });
+        } else {
+          onSortChange(null);
+        }
+      } else {
+        onSortChange({ column, direction: 'asc' });
+      }
+    },
+    [sortConfig, onSortChange],
+  );
+
   // Generate column definitions
   const columnDefs = useMemo<ColumnDef<Record<string, unknown>>[]>(() => {
-    return columns.map((col) => ({
+    return displayColumns.map((col) => ({
       accessorKey: col,
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span className="font-medium">{col}</span>
-          <span className="text-xs text-muted-foreground">text</span>
-        </div>
-      ),
+      header: () => {
+        const isSorted = sortConfig?.column === col;
+        const isAsc = isSorted && sortConfig?.direction === 'asc';
+        const isDesc = isSorted && sortConfig?.direction === 'desc';
+
+        return (
+          <button
+            type="button"
+            className="flex w-full items-center gap-1 hover:text-foreground"
+            onClick={() => handleSort(col)}
+          >
+            <span className="font-medium">{col}</span>
+            {isAsc && <ArrowUpIcon className="size-3" />}
+            {isDesc && <ArrowDownIcon className="size-3" />}
+            {!isSorted && (
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
+                ↕
+              </span>
+            )}
+          </button>
+        );
+      },
       cell: ({ getValue }) => {
         const value = getValue();
         if (value === null) {
@@ -40,7 +106,7 @@ export const TableDataGrid = memo(function TableDataGrid({
       },
       size: 200,
     }));
-  }, [columns]);
+  }, [displayColumns, sortConfig, handleSort]);
 
   const table = useReactTable({
     data,
@@ -53,6 +119,47 @@ export const TableDataGrid = memo(function TableDataGrid({
       value === null ? 'NULL' : typeof value === 'object' ? JSON.stringify(value) : String(value);
     navigator.clipboard.writeText(text);
   }, []);
+
+  const handleStartEdit = useCallback(
+    (rowIndex: number, column: string) => {
+      if (onCellEdit) {
+        setEditingCell({ rowIndex, column });
+      }
+    },
+    [onCellEdit],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingCell(null);
+  }, []);
+
+  const handleSaveEdit = useCallback(
+    async (
+      rowIndex: number,
+      column: string,
+      oldValue: unknown,
+      newValue: string,
+      rowData: Record<string, unknown>,
+    ) => {
+      if (!onCellEdit) {
+        return;
+      }
+      try {
+        await onCellEdit({
+          rowIndex,
+          column,
+          oldValue,
+          newValue,
+          rowData,
+        });
+        setEditingCell(null);
+      } catch (error) {
+        // Keep editing state open on error so user can retry
+        console.error('Failed to save cell edit:', error);
+      }
+    },
+    [onCellEdit],
+  );
 
   if (isLoading) {
     return <TableDataGridSkeleton />;
@@ -83,7 +190,7 @@ export const TableDataGrid = memo(function TableDataGrid({
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="border-b border-r px-3 py-2 text-left"
+                  className="group border-b border-r px-3 py-2 text-left cursor-pointer select-none"
                   style={{ width: header.getSize() }}
                 >
                   {header.isPlaceholder
@@ -111,25 +218,48 @@ export const TableDataGrid = memo(function TableDataGrid({
                   disabled
                 />
               </td>
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className="group relative border-r px-3 py-2"
-                  onDoubleClick={() => handleCopyCell(cell.getValue())}
-                >
-                  <div className="max-w-[300px] truncate">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1/2 hidden -translate-y-1/2 rounded p-1 hover:bg-accent group-hover:block"
-                    onClick={() => handleCopyCell(cell.getValue())}
-                    title="Copy value"
-                  >
-                    <CopyIcon className="size-3" />
-                  </button>
-                </td>
-              ))}
+              {row.getVisibleCells().map((cell) => {
+                const columnName = cell.column.id;
+                const cellValue = cell.getValue();
+                const isEditing =
+                  editingCell?.rowIndex === index && editingCell?.column === columnName;
+
+                return (
+                  <td key={cell.id} className="group relative border-r px-3 py-2">
+                    {onCellEdit ? (
+                      <EditableCell
+                        value={cellValue}
+                        rowIndex={index}
+                        column={columnName}
+                        isEditing={isEditing}
+                        onStartEdit={() => handleStartEdit(index, columnName)}
+                        onSave={(newValue) =>
+                          handleSaveEdit(index, columnName, cellValue, newValue, row.original)
+                        }
+                        onCancel={handleCancelEdit}
+                      />
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="max-w-75 truncate text-left"
+                          onDoubleClick={() => handleCopyCell(cellValue)}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </button>
+                        <button
+                          type="button"
+                          className="absolute right-1 top-1/2 hidden -translate-y-1/2 rounded p-1 hover:bg-accent group-hover:block"
+                          onClick={() => handleCopyCell(cellValue)}
+                          title="Copy value"
+                        >
+                          <CopyIcon className="size-3" />
+                        </button>
+                      </>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

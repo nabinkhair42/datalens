@@ -1,7 +1,14 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { DatabaseIcon, MoreVerticalIcon, PlusIcon } from 'lucide-react';
+import {
+  DatabaseIcon,
+  MoreVerticalIcon,
+  PanelLeftOpen,
+  PenLine,
+  PlusIcon,
+  TrashIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import { memo, useCallback, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -66,14 +73,10 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         ),
       },
       {
-        id: 'host',
-        accessorFn: (row) => `${row.host}:${row.port}`,
-        header: 'Host',
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {row.original.host}:{row.original.port}
-          </span>
-        ),
+        id: 'username',
+        accessorFn: (row) => `${row.username}`,
+        header: 'Username',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.username}</span>,
       },
       {
         accessorKey: 'database',
@@ -93,7 +96,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         size: 50,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()} className={'cursor-pointer'}>
               <MoreVerticalIcon className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -102,7 +105,9 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                   e.stopPropagation();
                   onConnect(row.original);
                 }}
+                className="flex gap-2 items-center justify-start"
               >
+                <PanelLeftOpen className="size-4" />
                 Open
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -110,13 +115,16 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                   e.stopPropagation();
                   onEdit(row.original);
                 }}
+                className="flex gap-2 items-center justify-start"
               >
+                <PenLine className="size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
                 onClick={(e) => handleDelete(row.original.id, e)}
+                className="flex gap-2 items-center justify-start text-destructive"
               >
+                <TrashIcon className="size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
