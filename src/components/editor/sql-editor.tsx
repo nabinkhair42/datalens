@@ -146,8 +146,25 @@ export const SQLEditor = memo(function SQLEditor({
         '.cm-activeLine': {
           backgroundColor: 'hsl(var(--accent) / 0.5)',
         },
+        // Selection highlighting - unfocused state
         '.cm-selectionBackground': {
-          backgroundColor: 'hsl(var(--primary) / 0.2) !important',
+          backgroundColor:
+            'hsl(var(--editor-selection) / var(--editor-selection-opacity)) !important',
+        },
+        // Selection highlighting - focused state (more visible)
+        '&.cm-focused .cm-selectionBackground': {
+          backgroundColor:
+            'hsl(var(--editor-selection) / var(--editor-selection-focused-opacity)) !important',
+        },
+        // Selection layer for better visibility
+        '.cm-selectionLayer .cm-selectionBackground': {
+          backgroundColor:
+            'hsl(var(--editor-selection) / var(--editor-selection-focused-opacity)) !important',
+        },
+        // Matching text highlight when selecting
+        '.cm-selectionMatch': {
+          backgroundColor: 'hsl(var(--editor-selection) / 0.2) !important',
+          borderRadius: '2px',
         },
         '.cm-cursor': {
           borderLeftColor: 'hsl(var(--foreground))',

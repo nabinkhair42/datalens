@@ -90,6 +90,11 @@
   --syntax-function: #2563eb;
   --syntax-type: #0891b2;
   --syntax-property: #7c3aed;
+
+  /* Editor Selection - Light Mode */
+  --editor-selection: 210 100% 56%;
+  --editor-selection-opacity: 0.25;
+  --editor-selection-focused-opacity: 0.35;
 }
 
 .dark {
@@ -134,6 +139,11 @@
   --syntax-function: #60a5fa;
   --syntax-type: #22d3ee;
   --syntax-property: #c084fc;
+
+  /* Editor Selection - Dark Mode */
+  --editor-selection: 210 100% 60%;
+  --editor-selection-opacity: 0.3;
+  --editor-selection-focused-opacity: 0.45;
 }
 
 @layer base {

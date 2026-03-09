@@ -149,6 +149,28 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     URL.revokeObjectURL(url);
   }, [results]);
 
+  const handleCopy = useCallback(() => {
+    if (results.data.length === 0) {
+      return;
+    }
+
+    const headers = results.columns.join('\t');
+    const rows = results.data.map((row) =>
+      results.columns
+        .map((col) => {
+          const value = row[col];
+          if (value === null) {
+            return '';
+          }
+          return String(value);
+        })
+        .join('\t'),
+    );
+
+    const text = [headers, ...rows].join('\n');
+    navigator.clipboard.writeText(text);
+  }, [results]);
+
   const handleHistoryClick = useCallback((historyQuery: string) => {
     setQuery(historyQuery);
   }, []);
@@ -399,6 +421,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
             executionTime={results.executionTime}
             isLoading={executeQuery.isPending}
             error={results.error}
+            onCopy={handleCopy}
             onExportCSV={handleExportCSV}
             onExportJSON={handleExportJSON}
           />

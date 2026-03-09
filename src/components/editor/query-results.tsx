@@ -22,6 +22,7 @@ interface QueryResultsProps {
   executionTime?: number | undefined;
   isLoading?: boolean | undefined;
   error?: string | null | undefined;
+  onCopy?: (() => void) | undefined;
   onExportCSV?: (() => void) | undefined;
   onExportJSON?: (() => void) | undefined;
 }
@@ -33,6 +34,7 @@ export const QueryResults = memo(function QueryResults({
   executionTime,
   isLoading,
   error,
+  onCopy,
   onExportCSV,
   onExportJSON,
 }: QueryResultsProps) {
@@ -141,6 +143,12 @@ export const QueryResults = memo(function QueryResults({
           )}
         </div>
         <div className="flex items-center gap-1">
+          {onCopy && (
+            <Button variant="ghost" size="sm" onClick={onCopy}>
+              <CopyIcon className="size-4" />
+              Copy
+            </Button>
+          )}
           {onExportCSV && (
             <Button variant="ghost" size="sm" onClick={onExportCSV}>
               <DownloadIcon className="size-4" />

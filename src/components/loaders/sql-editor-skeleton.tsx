@@ -55,8 +55,9 @@ export const SQLEditorSkeleton = memo(function SQLEditorSkeleton(): React.ReactE
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-12" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-14" />
               <Skeleton className="h-8 w-16" />
             </div>
           </div>
@@ -109,8 +110,9 @@ export const QueryResultsSkeleton = memo(function QueryResultsSkeleton(): React.
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-12" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-14" />
           <Skeleton className="h-8 w-16" />
         </div>
       </div>
