@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon } from 'lucide-react';
+import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, CopyIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 import { TableDataGridSkeleton } from '@/components/loaders';
@@ -21,12 +21,21 @@ export interface CellEdit {
   rowData: Record<string, unknown>;
 }
 
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable?: boolean;
+}
+
 interface TableDataGridProps {
   data: Record<string, unknown>[];
   columns: string[];
+  columnInfo?: ColumnInfo[];
   visibleColumns?: Set<string>;
+  selectedRows?: Set<number>;
   sortConfig?: SortConfig | null;
   onSortChange?: (sort: SortConfig | null) => void;
+  onSelectionChange?: (selectedRows: Set<number>) => void;
   onCellEdit?: (edit: CellEdit) => Promise<void>;
   isLoading?: boolean | undefined;
 }
@@ -34,14 +43,57 @@ interface TableDataGridProps {
 export const TableDataGrid = memo(function TableDataGrid({
   data,
   columns,
+  columnInfo,
   visibleColumns,
+  selectedRows = new Set(),
   sortConfig,
   onSortChange,
+  onSelectionChange,
   onCellEdit,
   isLoading,
 }: TableDataGridProps) {
   // Track which cell is currently being edited
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string } | null>(null);
+
+  // Row selection handlers
+  const isAllSelected = data.length > 0 && selectedRows.size === data.length;
+  const isSomeSelected = selectedRows.size > 0 && selectedRows.size < data.length;
+
+  const handleSelectAll = useCallback(() => {
+    if (!onSelectionChange) {
+      return;
+    }
+    if (isAllSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(data.map((_, i) => i)));
+    }
+  }, [data, isAllSelected, onSelectionChange]);
+
+  const handleSelectRow = useCallback(
+    (rowIndex: number) => {
+      if (!onSelectionChange) {
+        return;
+      }
+      const newSelected = new Set(selectedRows);
+      if (newSelected.has(rowIndex)) {
+        newSelected.delete(rowIndex);
+      } else {
+        newSelected.add(rowIndex);
+      }
+      onSelectionChange(newSelected);
+    },
+    [selectedRows, onSelectionChange],
+  );
+
+  // Create a map of column name to type for quick lookup
+  const columnTypeMap = useMemo(() => {
+    if (!columnInfo) {
+      return new Map<string, string>();
+    }
+    return new Map(columnInfo.map((col) => [col.name, col.type]));
+  }, [columnInfo]);
+
   // Filter columns by visibility
   const displayColumns = useMemo(() => {
     if (!visibleColumns) {
@@ -76,21 +128,25 @@ export const TableDataGrid = memo(function TableDataGrid({
         const isSorted = sortConfig?.column === col;
         const isAsc = isSorted && sortConfig?.direction === 'asc';
         const isDesc = isSorted && sortConfig?.direction === 'desc';
+        const colType = columnTypeMap.get(col);
 
         return (
           <button
             type="button"
-            className="flex w-full items-center gap-1 hover:text-foreground"
+            className="flex w-full items-center justify-between gap-2 hover:text-foreground"
             onClick={() => handleSort(col)}
           >
-            <span className="font-medium">{col}</span>
-            {isAsc && <ArrowUpIcon className="size-3" />}
-            {isDesc && <ArrowDownIcon className="size-3" />}
-            {!isSorted && (
-              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
-                ↕
-              </span>
-            )}
+            <span className="flex items-baseline gap-1.5 truncate">
+              <span className="font-medium">{col}</span>
+              {colType && (
+                <span className="text-xs font-normal text-muted-foreground">{colType}</span>
+              )}
+            </span>
+            <span className="shrink-0 text-muted-foreground">
+              {isAsc && <ArrowUpIcon className="size-3.5" />}
+              {isDesc && <ArrowDownIcon className="size-3.5" />}
+              {!isSorted && <ChevronsUpDownIcon className="size-3.5" />}
+            </span>
           </button>
         );
       },
@@ -106,7 +162,7 @@ export const TableDataGrid = memo(function TableDataGrid({
       },
       size: 200,
     }));
-  }, [displayColumns, sortConfig, handleSort]);
+  }, [displayColumns, sortConfig, handleSort, columnTypeMap]);
 
   const table = useReactTable({
     data,
@@ -161,7 +217,8 @@ export const TableDataGrid = memo(function TableDataGrid({
     [onCellEdit],
   );
 
-  if (isLoading) {
+  // Show full skeleton when loading without existing columns
+  if (isLoading && columns.length === 0) {
     return <TableDataGridSkeleton />;
   }
 
@@ -177,91 +234,141 @@ export const TableDataGrid = memo(function TableDataGrid({
     <div className="h-full overflow-auto">
       <table className="w-full border-collapse text-sm">
         <thead className="sticky top-0 z-10 bg-muted">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {/* Row selector column */}
-              <th className="w-10 border-b border-r px-2 py-2 text-center">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-muted-foreground"
-                  disabled
-                />
-              </th>
-              {headerGroup.headers.map((header) => (
+          <tr>
+            {/* Row selector column */}
+            <th className="w-10 border-b border-r px-2 py-2 text-center">
+              <input
+                type="checkbox"
+                className="size-4 cursor-pointer rounded border-muted-foreground accent-primary"
+                checked={isAllSelected}
+                ref={(el) => {
+                  if (el) {
+                    el.indeterminate = isSomeSelected;
+                  }
+                }}
+                onChange={handleSelectAll}
+                disabled={!onSelectionChange || data.length === 0 || isLoading}
+              />
+            </th>
+            {displayColumns.map((col) => {
+              const isSorted = sortConfig?.column === col;
+              const isAsc = isSorted && sortConfig?.direction === 'asc';
+              const isDesc = isSorted && sortConfig?.direction === 'desc';
+              const colType = columnTypeMap.get(col);
+
+              return (
                 <th
-                  key={header.id}
+                  key={col}
                   className="group border-b border-r px-3 py-2 text-left cursor-pointer select-none"
-                  style={{ width: header.getSize() }}
+                  style={{ minWidth: 150 }}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 hover:text-foreground"
+                    onClick={() => handleSort(col)}
+                    disabled={isLoading}
+                  >
+                    <span className="flex items-baseline gap-1.5 truncate">
+                      <span className="font-medium">{col}</span>
+                      {colType && (
+                        <span className="text-xs font-normal text-muted-foreground">{colType}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {isAsc && <ArrowUpIcon className="size-3.5" />}
+                      {isDesc && <ArrowDownIcon className="size-3.5" />}
+                      {!isSorted && <ChevronsUpDownIcon className="size-3.5" />}
+                    </span>
+                  </button>
                 </th>
-              ))}
-            </tr>
-          ))}
+              );
+            })}
+          </tr>
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row, index) => (
-            <tr
-              key={row.id}
-              className={cn(
-                'border-b transition-colors hover:bg-muted/50',
-                index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
-              )}
-            >
-              {/* Row selector */}
-              <td className="border-r px-2 py-2 text-center">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border-muted-foreground"
-                  disabled
-                />
-              </td>
-              {row.getVisibleCells().map((cell) => {
-                const columnName = cell.column.id;
-                const cellValue = cell.getValue();
-                const isEditing =
-                  editingCell?.rowIndex === index && editingCell?.column === columnName;
-
-                return (
-                  <td key={cell.id} className="group relative border-r px-3 py-2">
-                    {onCellEdit ? (
-                      <EditableCell
-                        value={cellValue}
-                        rowIndex={index}
-                        column={columnName}
-                        isEditing={isEditing}
-                        onStartEdit={() => handleStartEdit(index, columnName)}
-                        onSave={(newValue) =>
-                          handleSaveEdit(index, columnName, cellValue, newValue, row.original)
-                        }
-                        onCancel={handleCancelEdit}
-                      />
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="max-w-75 truncate text-left"
-                          onDoubleClick={() => handleCopyCell(cellValue)}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </button>
-                        <button
-                          type="button"
-                          className="absolute right-1 top-1/2 hidden -translate-y-1/2 rounded p-1 hover:bg-accent group-hover:block"
-                          onClick={() => handleCopyCell(cellValue)}
-                          title="Copy value"
-                        >
-                          <CopyIcon className="size-3" />
-                        </button>
-                      </>
-                    )}
+          {isLoading
+            ? // Show skeleton rows while loading
+              Array.from({ length: 10 }).map((_, index) => (
+                <tr
+                  key={`skeleton-${index}`}
+                  className={cn('border-b', index % 2 === 0 ? 'bg-background' : 'bg-muted/20')}
+                >
+                  <td className="border-r px-2 py-2 text-center">
+                    <div className="size-4 animate-pulse rounded bg-muted" />
                   </td>
-                );
-              })}
-            </tr>
-          ))}
+                  {displayColumns.map((col) => (
+                    <td key={col} className="border-r px-3 py-2">
+                      <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            : table.getRowModel().rows.map((row, index) => (
+                <tr
+                  key={row.id}
+                  className={cn(
+                    'border-b transition-colors hover:bg-muted/50',
+                    selectedRows.has(index)
+                      ? 'bg-primary/10'
+                      : index % 2 === 0
+                        ? 'bg-background'
+                        : 'bg-muted/20',
+                  )}
+                >
+                  {/* Row selector */}
+                  <td className="border-r px-2 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      className="size-4 cursor-pointer rounded border-muted-foreground accent-primary"
+                      checked={selectedRows.has(index)}
+                      onChange={() => handleSelectRow(index)}
+                      disabled={!onSelectionChange}
+                    />
+                  </td>
+                  {row.getVisibleCells().map((cell) => {
+                    const columnName = cell.column.id;
+                    const cellValue = cell.getValue();
+                    const isEditing =
+                      editingCell?.rowIndex === index && editingCell?.column === columnName;
+
+                    return (
+                      <td key={cell.id} className="group relative border-r px-3 py-2">
+                        {onCellEdit ? (
+                          <EditableCell
+                            value={cellValue}
+                            rowIndex={index}
+                            column={columnName}
+                            isEditing={isEditing}
+                            onStartEdit={() => handleStartEdit(index, columnName)}
+                            onSave={(newValue) =>
+                              handleSaveEdit(index, columnName, cellValue, newValue, row.original)
+                            }
+                            onCancel={handleCancelEdit}
+                          />
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="max-w-75 truncate text-left"
+                              onDoubleClick={() => handleCopyCell(cellValue)}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </button>
+                            <button
+                              type="button"
+                              className="absolute right-1 top-1/2 hidden -translate-y-1/2 rounded p-1 hover:bg-accent group-hover:block"
+                              onClick={() => handleCopyCell(cellValue)}
+                              title="Copy value"
+                            >
+                              <CopyIcon className="size-3" />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
         </tbody>
       </table>
     </div>

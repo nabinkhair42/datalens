@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, TrashIcon } from 'lucide-react';
 import { use, useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -59,7 +59,9 @@ export default function TablesPage({ params }: TablesPageProps) {
   const [filters, setFilters] = useState<TableFilter[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Helper to extract row count from query result
   const parseRowCount = useCallback((countResult: { rows: Record<string, unknown>[] }): number => {
@@ -148,6 +150,7 @@ export default function TablesPage({ params }: TablesPageProps) {
       setFilters([]);
       setVisibleColumns(new Set());
       setSortConfig(null);
+      setSelectedRows(new Set());
       loadTableData(schema, table, 0, 50, [], null);
     },
     [loadTableData],
@@ -273,6 +276,62 @@ export default function TablesPage({ params }: TablesPageProps) {
     [selectedTable, connectionId, executeQuery, handleRefresh],
   );
 
+  // Helper to build WHERE clause for a row
+  const buildRowWhereClause = useCallback((rowData: Record<string, unknown>): string => {
+    return Object.entries(rowData)
+      .filter(([_, value]) => value !== null)
+      .map(([col, value]) => {
+        if (typeof value === 'string') {
+          return `"${col}" = '${value.replace(/'/g, "''")}'`;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          return `"${col}" = ${value}`;
+        }
+        return `"${col}" = '${JSON.stringify(value).replace(/'/g, "''")}'`;
+      })
+      .join(' AND ');
+  }, []);
+
+  const deleteRows = useCallback(
+    async (schema: string, table: string, rows: Record<string, unknown>[]) => {
+      for (const rowData of rows) {
+        const whereClause = buildRowWhereClause(rowData);
+        const query = `DELETE FROM "${schema}"."${table}" WHERE ${whereClause}`;
+        await executeQuery.mutateAsync({ connectionId, query, skipHistory: false });
+      }
+    },
+    [connectionId, executeQuery, buildRowWhereClause],
+  );
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!selectedTable || selectedRows.size === 0) {
+      return;
+    }
+
+    const count = selectedRows.size;
+    const message = `Are you sure you want to delete ${count} record${count > 1 ? 's' : ''}?`;
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    const rowsToDelete = Array.from(selectedRows)
+      .map((i) => tableData.rows[i])
+      .filter(Boolean);
+
+    try {
+      await deleteRows(selectedTable.schema, selectedTable.table, rowsToDelete);
+      toast.success(`Deleted ${count} record${count > 1 ? 's' : ''}`);
+      setSelectedRows(new Set());
+      handleRefresh();
+    } catch (error) {
+      toast.error('Failed to delete records');
+      console.error('Delete error:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedTable, selectedRows, tableData.rows, deleteRows, handleRefresh]);
+
   // Derive column info with additional metadata from schema
   const tableColumnInfo = useMemo(() => {
     if (!selectedTable || !schemas) {
@@ -294,6 +353,7 @@ export default function TablesPage({ params }: TablesPageProps) {
       <aside className="w-64 shrink-0 border-r">
         <SchemaExplorer
           schemas={schemas ?? []}
+          selectedTable={selectedTable}
           isLoading={isLoadingSchema}
           isRefreshing={isFetchingSchema}
           onRefresh={() => refetchSchema()}
@@ -334,6 +394,17 @@ export default function TablesPage({ params }: TablesPageProps) {
                   onInsert={handleInsertRecord}
                   disabled={isLoadingData}
                 />
+                {selectedRows.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    disabled={isDeleting}
+                  >
+                    <TrashIcon className="size-4" />
+                    Delete {selectedRows.size} record{selectedRows.size > 1 ? 's' : ''}
+                  </Button>
+                )}
                 <ExportMenu
                   data={tableData.rows}
                   columns={tableData.columns}
@@ -384,9 +455,12 @@ export default function TablesPage({ params }: TablesPageProps) {
               <TableDataGrid
                 data={tableData.rows}
                 columns={tableData.columns}
+                columnInfo={tableData.columnInfo}
                 visibleColumns={visibleColumns}
+                selectedRows={selectedRows}
                 sortConfig={sortConfig}
                 onSortChange={handleSortChange}
+                onSelectionChange={setSelectedRows}
                 onCellEdit={handleCellEdit}
                 isLoading={isLoadingData}
               />
