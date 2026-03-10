@@ -88,59 +88,97 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
     const client = await this.pool.connect();
 
     try {
-      const schemasResult = await client.query(`
-        SELECT schema_name
-        FROM information_schema.schemata
-        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-        ORDER BY schema_name
+      // Single query fetches ALL schemas, tables, columns, and key info in one round-trip.
+      // This eliminates the N+1 waterfall (was: 1 query per schema + 1 per table + 1 per column set).
+      const result = await client.query(`
+        SELECT
+          t.table_schema,
+          t.table_name,
+          pc.reltuples::bigint AS row_estimate,
+          c.column_name,
+          c.data_type,
+          c.is_nullable,
+          c.column_default,
+          c.ordinal_position,
+          EXISTS (
+            SELECT 1 FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+              AND tc.table_schema = t.table_schema AND tc.table_name = t.table_name
+              AND kcu.column_name = c.column_name
+          ) AS is_primary_key,
+          EXISTS (
+            SELECT 1 FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND tc.table_schema = t.table_schema AND tc.table_name = t.table_name
+              AND kcu.column_name = c.column_name
+          ) AS is_foreign_key
+        FROM information_schema.tables t
+        JOIN information_schema.columns c
+          ON c.table_schema = t.table_schema AND c.table_name = t.table_name
+        LEFT JOIN pg_class pc
+          ON pc.oid = (quote_ident(t.table_schema) || '.' || quote_ident(t.table_name))::regclass
+        WHERE t.table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+          AND t.table_type = 'BASE TABLE'
+        ORDER BY t.table_schema, t.table_name, c.ordinal_position
       `);
 
-      const schemas: SchemaInfo[] = [];
+      // Assemble flat rows into nested SchemaInfo[] structure
+      const schemaMap = new Map<
+        string,
+        Map<string, { rowCount: number | undefined; columns: ColumnInfo[] }>
+      >();
 
-      for (const row of schemasResult.rows) {
-        const schemaName = row.schema_name as string;
-        const tables = await this.getTablesForSchema(client, schemaName);
-        schemas.push({
-          name: schemaName,
-          tables,
+      for (const row of result.rows) {
+        const schemaName = row.table_schema as string;
+        const tableName = row.table_name as string;
+
+        let tableMap = schemaMap.get(schemaName);
+        if (!tableMap) {
+          tableMap = new Map();
+          schemaMap.set(schemaName, tableMap);
+        }
+
+        let tableEntry = tableMap.get(tableName);
+        if (!tableEntry) {
+          tableEntry = {
+            rowCount: row.row_estimate != null ? Number(row.row_estimate) : undefined,
+            columns: [],
+          };
+          tableMap.set(tableName, tableEntry);
+        }
+
+        tableEntry.columns.push({
+          name: row.column_name as string,
+          type: row.data_type as string,
+          nullable: row.is_nullable === 'YES',
+          isPrimaryKey: row.is_primary_key as boolean,
+          isForeignKey: row.is_foreign_key as boolean,
+          defaultValue: row.column_default as string | undefined,
         });
+      }
+
+      const schemas: SchemaInfo[] = [];
+      for (const [schemaName, tableMap] of schemaMap) {
+        const tables: TableInfo[] = [];
+        for (const [tableName, entry] of tableMap) {
+          tables.push({
+            name: tableName,
+            schema: schemaName,
+            columns: entry.columns,
+            rowCount: entry.rowCount,
+          });
+        }
+        schemas.push({ name: schemaName, tables });
       }
 
       return schemas;
     } finally {
       client.release();
     }
-  }
-
-  private async getTablesForSchema(client: pg.PoolClient, schema: string): Promise<TableInfo[]> {
-    const tablesResult = await client.query(
-      `
-      SELECT
-        t.table_name,
-        (SELECT reltuples::bigint FROM pg_class WHERE oid = (quote_ident($1) || '.' || quote_ident(t.table_name))::regclass) as row_estimate
-      FROM information_schema.tables t
-      WHERE t.table_schema = $1
-        AND t.table_type = 'BASE TABLE'
-      ORDER BY t.table_name
-    `,
-      [schema],
-    );
-
-    const tables: TableInfo[] = [];
-
-    for (const tableRow of tablesResult.rows) {
-      const tableName = tableRow.table_name as string;
-      const columns = await this.getColumnsForTable(client, schema, tableName);
-
-      tables.push({
-        name: tableName,
-        schema,
-        columns,
-        rowCount: tableRow.row_estimate ? Number(tableRow.row_estimate) : undefined,
-      });
-    }
-
-    return tables;
   }
 
   private async getColumnsForTable(
@@ -155,26 +193,20 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
         c.data_type,
         c.is_nullable,
         c.column_default,
-        (
-          SELECT COUNT(*) > 0
-          FROM information_schema.table_constraints tc
+        EXISTS (
+          SELECT 1 FROM information_schema.table_constraints tc
           JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name
-            AND tc.table_schema = kcu.table_schema
+            ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
           WHERE tc.constraint_type = 'PRIMARY KEY'
-            AND tc.table_schema = c.table_schema
-            AND tc.table_name = c.table_name
+            AND tc.table_schema = c.table_schema AND tc.table_name = c.table_name
             AND kcu.column_name = c.column_name
         ) as is_primary_key,
-        (
-          SELECT COUNT(*) > 0
-          FROM information_schema.table_constraints tc
+        EXISTS (
+          SELECT 1 FROM information_schema.table_constraints tc
           JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name
-            AND tc.table_schema = kcu.table_schema
+            ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
           WHERE tc.constraint_type = 'FOREIGN KEY'
-            AND tc.table_schema = c.table_schema
-            AND tc.table_name = c.table_name
+            AND tc.table_schema = c.table_schema AND tc.table_name = c.table_name
             AND kcu.column_name = c.column_name
         ) as is_foreign_key
       FROM information_schema.columns c

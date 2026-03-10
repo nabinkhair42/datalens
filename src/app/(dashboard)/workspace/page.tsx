@@ -74,14 +74,13 @@ export default function WorkspacePage() {
     [queryClient],
   );
 
-  // Prefetch schema on row hover — data is ready by the time user clicks "Open"
+  // Seed the individual connection cache on hover so navigation is instant.
+  // Do NOT prefetch schema here — it takes 10s+ on serverless DB and blocks
+  // the browser's 6-connection limit, queuing critical requests behind it.
+  // Schema is prefetched later in the workspace header once user has committed.
   const handleHover = useCallback(
     (connection: Connection) => {
-      queryClient.prefetchQuery({
-        queryKey: [...QUERY_KEYS.CONNECTION(connection.id), 'schema'],
-        queryFn: () => connectionService.getSchema(connection.id),
-        staleTime: 5 * 60 * 1000, // 5 min — schema rarely changes
-      });
+      queryClient.setQueryData(QUERY_KEYS.CONNECTION(connection.id), connection);
     },
     [queryClient],
   );

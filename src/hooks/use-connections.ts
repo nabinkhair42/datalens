@@ -21,10 +21,27 @@ export function useConnections(params?: PaginationParams) {
 }
 
 export function useConnection(id: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: QUERY_KEYS.CONNECTION(id),
     queryFn: () => connectionService.get(id),
     enabled: !!id,
+    staleTime: 2 * 60 * 1000, // 2 minutes — connection details rarely change
+    // Seed from list cache: if the connection is already in the paginated list,
+    // show it instantly while the full data (with password) loads in background.
+    initialData: () => {
+      const listsData = queryClient.getQueriesData<PaginatedConnections>({
+        queryKey: QUERY_KEYS.CONNECTIONS,
+      });
+      for (const [, data] of listsData) {
+        const match = data?.data.find((conn) => conn.id === id);
+        if (match) {
+          return match;
+        }
+      }
+      return undefined;
+    },
   });
 }
 

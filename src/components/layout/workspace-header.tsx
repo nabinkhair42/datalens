@@ -25,6 +25,7 @@ import { DATABASE_TYPE_LABELS, QUERY_KEYS } from '@/config/constants';
 import { useConnection, useConnections } from '@/hooks/use-connections';
 import { cn } from '@/lib/utils';
 import connectionService from '@/services/connection.service';
+import queryService from '@/services/query.service';
 
 interface WorkspaceHeaderProps {
   connectionId: string;
@@ -55,6 +56,20 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
     },
     [queryClient],
   );
+
+  // Prefetch saved queries + history when hovering SQL Editor tab
+  const handleSqlTabHover = useCallback(() => {
+    queryClient.prefetchQuery({
+      queryKey: QUERY_KEYS.SAVED_QUERIES,
+      queryFn: () => queryService.saved.list(),
+      staleTime: 5 * 60 * 1000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: [...QUERY_KEYS.QUERY_HISTORY, { connectionId, limit: 20 }],
+      queryFn: () => queryService.getHistory({ connectionId, limit: 20 }),
+      staleTime: 30 * 1000,
+    });
+  }, [queryClient, connectionId]);
 
   // Move useMemo before early returns to follow Rules of Hooks
   const navItems = useMemo(
@@ -161,11 +176,13 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
+            const isSqlTab = item.label === 'SQL Editor';
             return (
               <ButtonGroup key={item.href}>
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
                   onClick={() => navigateTo(item.href)}
+                  onMouseEnter={isSqlTab ? handleSqlTabHover : undefined}
                 >
                   <item.icon className="size-4" />
                   {item.label}
