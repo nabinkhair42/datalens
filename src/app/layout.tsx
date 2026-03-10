@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import { Suspense } from 'react';
+import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
 
-import { PageLoader } from '@/components/loaders/spinner';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -11,14 +9,10 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import './globals.css';
 import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 
-const geistSans = Geist({
+const geistSans = Poppins({
+  subsets: ['latin'],
   variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
@@ -37,15 +31,10 @@ export default function RootLayout({
 }>): React.ReactElement {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
+      <body className={`${geistSans.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
-            <Suspense fallback={<PageLoader />}>
-              <AuthProvider>{children}</AuthProvider>
-            </Suspense>
+            <AuthProvider>{children}</AuthProvider>
           </QueryProvider>
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>

@@ -38,12 +38,12 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
       <header className="border-b">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <div className="max-w-5xl mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <DatabaseIcon className="size-5 text-primary" />
             <span className="font-semibold">DataLens</span>
           </div>
-          <Button size="sm" variant="ghost" asChild>
+          <Button variant="ghost" asChild>
             <Link href="/login">Sign In</Link>
           </Button>
         </div>
@@ -52,14 +52,6 @@ export default function LandingPage() {
       {/* Hero */}
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
         <div className="max-w-3xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-primary" />
-            </span>
-            Now in beta
-          </div>
-
           <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             Figma for your
             <span className="text-primary"> database</span>
@@ -99,7 +91,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t py-6">
-        <div className="container mx-auto flex items-center justify-between px-4 text-sm text-muted-foreground">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 text-sm text-muted-foreground">
           <p>Built with Next.js, CodeMirror, and TanStack</p>
           <p>Open Source</p>
         </div>

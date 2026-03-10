@@ -8,8 +8,15 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, CopyIcon, DownloadIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import {
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  CheckIcon,
+  CopyIcon,
+  DownloadIcon,
+} from 'lucide-react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import { QueryResultsSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
@@ -39,6 +46,16 @@ export const QueryResults = memo(function QueryResults({
   onExportJSON,
 }: QueryResultsProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // rerender-move-effect-to-event: timeout belongs in handler, not effect
+  const handleCopy = useCallback(() => {
+    onCopy?.();
+    setCopied(true);
+    clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+  }, [onCopy]);
 
   // Generate column definitions from column names
   const columnDefs = useMemo<ColumnDef<Record<string, unknown>>[]>(() => {
@@ -144,9 +161,18 @@ export const QueryResults = memo(function QueryResults({
         </div>
         <div className="flex items-center gap-1">
           {onCopy && (
-            <Button variant="ghost" size="sm" onClick={onCopy}>
-              <CopyIcon className="size-4" />
-              Copy
+            <Button variant="ghost" size="sm" onClick={handleCopy}>
+              {copied ? (
+                <>
+                  <CheckIcon className="size-4 text-green-500" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <CopyIcon className="size-4" />
+                  Copy
+                </>
+              )}
             </Button>
           )}
           {onExportCSV && (

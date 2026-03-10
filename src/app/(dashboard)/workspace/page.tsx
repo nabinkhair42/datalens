@@ -64,18 +64,10 @@ export default function WorkspacePage() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
-
-      <main className="container mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-medium">
-              {paginatedData?.pagination.total === 1 ? 'Connection' : 'Connections'}
-              {paginatedData?.pagination.total ? (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({paginatedData.pagination.total})
-                </span>
-              ) : null}
-            </h1>
+            <h1 className="text-lg font-medium">Connections</h1>
             <Button size="sm" onClick={handleOpenForm}>
               <PlusIcon className="size-4" />
               New Connection
