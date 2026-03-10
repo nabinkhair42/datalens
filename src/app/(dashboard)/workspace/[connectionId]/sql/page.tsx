@@ -2,7 +2,7 @@
 
 import { ClockIcon, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { use, useCallback, useState } from 'react';
+import { use, useCallback, useRef, useState } from 'react';
 
 import { QueryResults } from '@/components/editor/query-results';
 import { Button } from '@/components/ui/button';
@@ -72,6 +72,11 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     columns: [],
   });
 
+  // rerender-use-ref-transient-values: Keep results in a ref so export/copy
+  // callbacks have stable references and don't cause QueryResults to re-render.
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
+
   const handleExecute = useCallback(async () => {
     if (!query.trim()) {
       return;
@@ -101,13 +106,14 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   }, [query, connectionId, executeQuery]);
 
   const handleExportCSV = useCallback(() => {
-    if (results.data.length === 0) {
+    const { data, columns } = resultsRef.current;
+    if (data.length === 0) {
       return;
     }
 
-    const headers = results.columns.join(',');
-    const rows = results.data.map((row) =>
-      results.columns
+    const headers = columns.join(',');
+    const rows = data.map((row) =>
+      columns
         .map((col) => {
           const value = row[col];
           if (value === null) {
@@ -129,14 +135,15 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     a.download = `query-results-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [results]);
+  }, []);
 
   const handleExportJSON = useCallback(() => {
-    if (results.data.length === 0) {
+    const { data } = resultsRef.current;
+    if (data.length === 0) {
       return;
     }
 
-    const json = JSON.stringify(results.data, null, 2);
+    const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -144,16 +151,17 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     a.download = `query-results-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [results]);
+  }, []);
 
   const handleCopy = useCallback(() => {
-    if (results.data.length === 0) {
+    const { data, columns } = resultsRef.current;
+    if (data.length === 0) {
       return;
     }
 
-    const headers = results.columns.join('\t');
-    const rows = results.data.map((row) =>
-      results.columns
+    const headers = columns.join('\t');
+    const rows = data.map((row) =>
+      columns
         .map((col) => {
           const value = row[col];
           if (value === null) {
@@ -166,7 +174,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
 
     const text = [headers, ...rows].join('\n');
     navigator.clipboard.writeText(text);
-  }, [results]);
+  }, []);
 
   const handleHistoryClick = useCallback((historyQuery: string) => {
     setQuery(historyQuery);

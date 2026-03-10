@@ -18,8 +18,8 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       password: config.password,
       ssl: config.ssl ? { rejectUnauthorized: false } : false,
       max: 5,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 60000, // 60s — keep connections warm to avoid Neon cold-start latency
+      connectionTimeoutMillis: 10000,
     });
   }
 
@@ -41,20 +41,18 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
 
   async executeQuery(query: string): Promise<QueryResult> {
     const startTime = Date.now();
-    const QUERY_TIMEOUT_MS = 30000;
     let client: pg.PoolClient | null = null;
 
     try {
       client = await this.pool.connect();
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Query timeout: execution exceeded 30 seconds'));
-        }, QUERY_TIMEOUT_MS);
-      });
-
-      const result = await Promise.race([client.query(query), timeoutPromise]);
-      const executionTime = Date.now() - startTime;
+      // Use PostgreSQL's native statement_timeout instead of JS Promise.race.
+      // This is cleaner (no timer leak), cancels the query server-side, and
+      // measures only query execution time, not pool connection wait.
+      await client.query('SET statement_timeout = 30000');
+      const queryStart = Date.now();
+      const result = await client.query(query);
+      const executionTime = Date.now() - queryStart;
 
       const columns: QueryColumn[] = result.fields.map((field) => ({
         name: field.name,
@@ -72,8 +70,12 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       const executionTime = Date.now() - startTime;
       const message = error instanceof Error ? error.message : 'Query execution failed';
 
-      if (message.includes('Query timeout')) {
-        throw new QueryExecutionError(message, executionTime);
+      // PostgreSQL returns "canceling statement due to statement timeout" on timeout
+      if (message.includes('statement timeout')) {
+        throw new QueryExecutionError(
+          'Query timeout: execution exceeded 30 seconds',
+          executionTime,
+        );
       }
 
       throw new QueryExecutionError(message, executionTime);

@@ -16,6 +16,14 @@ import { getCachedConnectionConfig } from '@/server/services/connection.service'
 // Blocked DDL keywords
 const BLOCKED_KEYWORDS = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'GRANT', 'REVOKE'] as const;
 
+// js-hoist-regexp: Pre-compile blocked keyword patterns to avoid re-creating per call
+const BLOCKED_KEYWORD_START_PATTERNS = BLOCKED_KEYWORDS.map(
+  (kw) => new RegExp(`^${kw}[\\s\\n\\t]`, 'i'),
+);
+const BLOCKED_KEYWORD_INLINE_PATTERNS = BLOCKED_KEYWORDS.map(
+  (kw) => new RegExp(`(^|\\s|;)${kw}(\\s|;|$)`, 'i'),
+);
+
 const queryLogger = {
   start: (queryId: string, connectionId: string, queryPreview: string) => {
     console.log(
@@ -69,32 +77,25 @@ const queryLogger = {
   },
 };
 
-function validateQuery(query: string): { blocked: boolean; message?: string; warning?: string } {
-  const normalizedQuery = query.trim().toUpperCase();
+// js-hoist-regexp: Pre-compiled delete pattern
+const DELETE_PATTERN = /(\s|^|;)DELETE(\s|;|$)/i;
 
-  for (const keyword of BLOCKED_KEYWORDS) {
+function validateQuery(query: string): { blocked: boolean; message?: string; warning?: string } {
+  const trimmed = query.trim();
+
+  for (let i = 0; i < BLOCKED_KEYWORDS.length; i++) {
     if (
-      normalizedQuery.startsWith(`${keyword} `) ||
-      normalizedQuery.startsWith(`${keyword}\n`) ||
-      normalizedQuery.startsWith(`${keyword}\t`)
+      BLOCKED_KEYWORD_START_PATTERNS[i]?.test(trimmed) ||
+      BLOCKED_KEYWORD_INLINE_PATTERNS[i]?.test(query)
     ) {
       return {
         blocked: true,
-        message: `Query blocked: ${keyword} operations are not allowed for safety reasons`,
-      };
-    }
-
-    const keywordPattern = new RegExp(`(^|\\s|;)${keyword}(\\s|;|$)`, 'i');
-    if (keywordPattern.test(query)) {
-      return {
-        blocked: true,
-        message: `Query blocked: ${keyword} operations are not allowed for safety reasons`,
+        message: `Query blocked: ${BLOCKED_KEYWORDS[i]} operations are not allowed for safety reasons`,
       };
     }
   }
 
-  const deletePattern = /(\s|^|;)DELETE(\s|;|$)/i;
-  if (deletePattern.test(query)) {
+  if (DELETE_PATTERN.test(query)) {
     return {
       blocked: false,
       warning: 'DELETE operation detected. Please ensure you have appropriate WHERE clauses.',
@@ -205,8 +206,10 @@ export const queryServerService = {
 
       queryLogger.success(queryId, data.connectionId, executionTime, result.rowCount ?? 0);
 
+      // server-after-nonblocking: Record history without blocking the response.
+      // User sees results immediately; history insert happens in background.
       if (!data.skipHistory) {
-        await recordQueryHistory({
+        recordQueryHistory({
           connectionId: data.connectionId,
           userId,
           query: data.query,
@@ -214,7 +217,7 @@ export const queryServerService = {
           rowCount: result.rowCount ?? 0,
           success: true,
           error: null,
-        });
+        }).catch((err) => console.error('Failed to record query history:', err));
       }
 
       return result;
@@ -223,7 +226,7 @@ export const queryServerService = {
       queryLogger.failure(queryId, data.connectionId, executionTime, message);
 
       if (!data.skipHistory) {
-        await recordQueryHistory({
+        recordQueryHistory({
           connectionId: data.connectionId,
           userId,
           query: data.query,
@@ -231,7 +234,7 @@ export const queryServerService = {
           rowCount: 0,
           success: false,
           error: message,
-        });
+        }).catch((err) => console.error('Failed to record query history:', err));
       }
 
       throw new Error(message);
@@ -248,25 +251,18 @@ export const queryServerService = {
   ): Promise<QueryHistoryItem[]> {
     const limit = options?.limit ?? 50;
 
-    let query = db
+    const conditions = [eq(queryHistory.userId, userId)];
+    if (options?.connectionId) {
+      conditions.push(eq(queryHistory.connectionId, options.connectionId));
+    }
+
+    const rows = await db
       .select()
       .from(queryHistory)
-      .where(eq(queryHistory.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(queryHistory.executedAt))
       .limit(limit);
 
-    if (options?.connectionId) {
-      query = db
-        .select()
-        .from(queryHistory)
-        .where(
-          and(eq(queryHistory.userId, userId), eq(queryHistory.connectionId, options.connectionId)),
-        )
-        .orderBy(desc(queryHistory.executedAt))
-        .limit(limit);
-    }
-
-    const rows = await query;
     return rows.map(mapToHistoryItem);
   },
 
@@ -326,11 +322,8 @@ export const queryServerService = {
       data: { [K in keyof SavedQueryFormData]?: SavedQueryFormData[K] | undefined },
       userId: string,
     ): Promise<SavedQuery | null> {
-      const existing = await this.get(id, userId);
-      if (!existing) {
-        return null;
-      }
-
+      // Single UPDATE + RETURNING — no need for a separate SELECT first.
+      // If the row doesn't exist or doesn't belong to this user, rows will be empty.
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
