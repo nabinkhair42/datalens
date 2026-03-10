@@ -74,6 +74,18 @@ export default function WorkspacePage() {
     [queryClient],
   );
 
+  // Prefetch schema on row hover — data is ready by the time user clicks "Open"
+  const handleHover = useCallback(
+    (connection: Connection) => {
+      queryClient.prefetchQuery({
+        queryKey: [...QUERY_KEYS.CONNECTION(connection.id), 'schema'],
+        queryFn: () => connectionService.getSchema(connection.id),
+        staleTime: 5 * 60 * 1000, // 5 min — schema rarely changes
+      });
+    },
+    [queryClient],
+  );
+
   const handleFormClose = useCallback((open: boolean) => {
     setFormOpen(open);
     if (!open) {
@@ -112,6 +124,7 @@ export default function WorkspacePage() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onCreateNew={handleOpenForm}
+              onHover={handleHover}
             />
           )}
         </div>

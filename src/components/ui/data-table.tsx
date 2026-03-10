@@ -29,6 +29,7 @@ export interface DataTableProps<TData, TValue> {
   enablePagination?: boolean;
   pageSize?: number;
   onRowClick?: (row: TData) => void;
+  onRowHover?: ((row: TData) => void) | undefined;
   emptyState?: {
     icon?: React.ReactNode;
     title: string;
@@ -48,6 +49,7 @@ export function DataTable<TData, TValue>({
   enablePagination = false,
   pageSize = 10,
   onRowClick,
+  onRowHover,
   emptyState,
   className,
 }: DataTableProps<TData, TValue>): React.ReactElement {
@@ -157,6 +159,7 @@ export function DataTable<TData, TValue>({
                       onRowClick && 'cursor-pointer',
                     )}
                     onClick={() => onRowClick?.(row.original)}
+                    onMouseEnter={() => onRowHover?.(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-4 py-3">

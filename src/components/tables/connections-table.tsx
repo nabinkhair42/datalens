@@ -31,6 +31,7 @@ export interface ConnectionsTableProps {
   onEdit: (connection: Connection) => void;
   onDelete: (id: string) => void;
   onCreateNew?: () => void;
+  onHover?: (connection: Connection) => void;
 }
 
 export const ConnectionsTable = memo(function ConnectionsTable({
@@ -40,6 +41,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
   onEdit,
   onDelete,
   onCreateNew,
+  onHover,
 }: ConnectionsTableProps): React.ReactElement {
   const handleDelete = useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -145,6 +147,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
       enablePagination
       pageSize={10}
       onRowClick={onConnect}
+      onRowHover={onHover}
       emptyState={{
         icon: <DatabaseIcon className="size-12" />,
         title: 'No connections yet',

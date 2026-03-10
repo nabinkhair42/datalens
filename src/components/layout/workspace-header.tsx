@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -9,7 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -20,9 +21,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DATABASE_TYPE_LABELS } from '@/config/constants';
+import { DATABASE_TYPE_LABELS, QUERY_KEYS } from '@/config/constants';
 import { useConnection, useConnections } from '@/hooks/use-connections';
 import { cn } from '@/lib/utils';
+import connectionService from '@/services/connection.service';
 
 interface WorkspaceHeaderProps {
   connectionId: string;
@@ -32,6 +34,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
   connectionId,
 }: WorkspaceHeaderProps) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { data: connection, isLoading } = useConnection(connectionId);
   const { data: paginatedConnections } = useConnections();
   const connections = paginatedConnections?.data;
@@ -40,6 +43,18 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
   const navigateTo = (href: string) => {
     router.push(href);
   };
+
+  // Prefetch schema on hover — instant load when user switches connections
+  const handleConnectionHover = useCallback(
+    (connId: string) => {
+      queryClient.prefetchQuery({
+        queryKey: [...QUERY_KEYS.CONNECTION(connId), 'schema'],
+        queryFn: () => connectionService.getSchema(connId),
+        staleTime: 5 * 60 * 1000,
+      });
+    },
+    [queryClient],
+  );
 
   // Move useMemo before early returns to follow Rules of Hooks
   const navItems = useMemo(
@@ -121,7 +136,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
             {connections?.map((conn) => (
-              <DropdownMenuItem key={conn.id}>
+              <DropdownMenuItem key={conn.id} onMouseEnter={() => handleConnectionHover(conn.id)}>
                 <Link
                   href={`/workspace/${conn.id}/tables`}
                   className={cn('flex w-full items-center gap-2')}

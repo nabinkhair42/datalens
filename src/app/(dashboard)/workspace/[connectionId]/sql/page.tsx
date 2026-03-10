@@ -47,7 +47,7 @@ interface SQLEditorPageProps {
 export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   const { connectionId } = use(params);
   const { data: connection } = useConnection(connectionId);
-  const { data: history, refetch: refetchHistory } = useQueryHistory({
+  const { data: history } = useQueryHistory({
     connectionId,
     limit: 20,
   });
@@ -91,9 +91,6 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         executionTime: result.executionTime ?? undefined,
         error: null,
       });
-
-      // Refresh history after execution
-      refetchHistory();
     } catch (error) {
       setResults({
         data: [],
@@ -101,7 +98,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         error: error instanceof Error ? error.message : 'Query execution failed',
       });
     }
-  }, [query, connectionId, executeQuery, refetchHistory]);
+  }, [query, connectionId, executeQuery]);
 
   const handleExportCSV = useCallback(() => {
     if (results.data.length === 0) {

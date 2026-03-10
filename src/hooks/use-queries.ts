@@ -3,7 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { QUERY_KEYS } from '@/config/constants';
-import type { ExecuteQueryFormData, SavedQuery, SavedQueryFormData } from '@/schemas/query.schema';
+import type {
+  ExecuteQueryFormData,
+  QueryHistoryItem,
+  SavedQuery,
+  SavedQueryFormData,
+} from '@/schemas/query.schema';
 import queryService, { type QueryHistoryParams } from '@/services/query.service';
 
 export function useExecuteQuery() {
@@ -11,7 +16,39 @@ export function useExecuteQuery() {
 
   return useMutation({
     mutationFn: (data: ExecuteQueryFormData) => queryService.execute(data),
-    onSuccess: () => {
+    onSuccess: (result, variables) => {
+      // Skip history update for automatic queries (table data loading, etc.)
+      if (variables.skipHistory) {
+        return;
+      }
+
+      // Optimistic update: prepend new history entry to all cached history lists.
+      // No invalidation needed — the entry is constructed from the mutation result.
+      queryClient.setQueriesData<QueryHistoryItem[]>(
+        { queryKey: QUERY_KEYS.QUERY_HISTORY },
+        (old) => {
+          if (!old) {
+            return old;
+          }
+          const newEntry: QueryHistoryItem = {
+            id: `temp-${Date.now()}`,
+            connectionId: variables.connectionId,
+            query: variables.query,
+            executedAt: new Date().toISOString(),
+            executionTime: result.executionTime,
+            rowCount: result.rowCount,
+            success: true,
+            error: null,
+          };
+          return [newEntry, ...old];
+        },
+      );
+    },
+    onError: (_error, variables) => {
+      if (variables.skipHistory) {
+        return;
+      }
+      // Server may still create a failed history entry — invalidate to fetch it
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.QUERY_HISTORY });
     },
   });
