@@ -1,21 +1,23 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
-
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { PageLoader } from '@/components/loaders/spinner';
 import { useAuth } from '@/components/providers/auth-provider';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
 import { ConnectionForm } from '@/components/workspace/connection-form';
+import { QUERY_KEYS } from '@/config/constants';
 import { useConnections, useDeleteConnection } from '@/hooks/use-connections';
 import type { Connection, PaginationParams } from '@/schemas/connection.schema';
 import connectionService from '@/services/connection.service';
 
 export default function WorkspacePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
@@ -52,11 +54,25 @@ export default function WorkspacePage() {
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback(async (connection: Connection) => {
-    const fullConnection = await connectionService.get(connection.id);
-    setEditingConnection(fullConnection);
-    setFormOpen(true);
-  }, []);
+  const handleEdit = useCallback(
+    async (connection: Connection) => {
+      // Open form instantly with data we already have from the list (everything except password)
+      setEditingConnection(connection);
+      setFormOpen(true);
+
+      // Fetch full connection (with password) via React Query cache.
+      // If cached from a previous edit, this returns instantly. Otherwise fetches in background.
+      const fullConnection = await queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.CONNECTION(connection.id),
+        queryFn: () => connectionService.get(connection.id),
+        staleTime: 2 * 60 * 1000, // 2 min — don't refetch if recently loaded
+      });
+
+      // Update form with full data (password field fills in)
+      setEditingConnection(fullConnection);
+    },
+    [queryClient],
+  );
 
   const handleFormClose = useCallback((open: boolean) => {
     setFormOpen(open);
