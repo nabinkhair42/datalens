@@ -28,24 +28,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    // Handle specific error codes
-
-    // Handle 401 Unauthorized - redirect to login
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
-    }
-
-    // Handle 403 Forbidden
-    if (error.response?.status === 403) {
-      console.error('Access forbidden');
-    }
-
-    // Handle 500 Internal Server Error
-    if (error.response?.status === 500) {
-      console.error('Server error occurred');
-    }
+    // Don't hard-redirect on 401 — let AuthProvider handle it.
+    // A full window.location.href reload destroys all client state (React Query cache,
+    // form state, editor content). Instead, just reject so React Query's retry/error
+    // handling and the auth provider's session check coordinate the redirect.
 
     return Promise.reject(error);
   },

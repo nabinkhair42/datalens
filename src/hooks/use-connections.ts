@@ -34,7 +34,7 @@ export function useCreateConnection() {
   return useMutation({
     mutationFn: (data: ConnectionFormData) => connectionService.create(data),
     onSuccess: (newConnection) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONNECTIONS });
+      // Set optimistic data — don't also invalidate or it refetches immediately and wastes the update
       queryClient.setQueriesData<PaginatedConnections>(
         { queryKey: QUERY_KEYS.CONNECTIONS },
         (old) => {
@@ -91,7 +91,7 @@ export function useDeleteConnection() {
     mutationFn: (id: string) => connectionService.delete(id),
     onSuccess: (_, deletedId) => {
       queryClient.removeQueries({ queryKey: QUERY_KEYS.CONNECTION(deletedId) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONNECTIONS });
+      // Set optimistic data directly — no need to also invalidate and refetch
       queryClient.setQueriesData<PaginatedConnections>(
         { queryKey: QUERY_KEYS.CONNECTIONS },
         (old) => {

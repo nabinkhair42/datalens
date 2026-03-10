@@ -47,7 +47,7 @@ export const QueryResults = memo(function QueryResults({
 }: QueryResultsProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [copied, setCopied] = useState(false);
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // rerender-move-effect-to-event: timeout belongs in handler, not effect
   const handleCopy = useCallback(() => {

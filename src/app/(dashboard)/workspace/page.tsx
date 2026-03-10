@@ -3,7 +3,10 @@
 import { PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
+
 import { DashboardHeader } from '@/components/layout/dashboard-header';
+import { PageLoader } from '@/components/loaders/spinner';
+import { useAuth } from '@/components/providers/auth-provider';
 import { ConnectionsTable } from '@/components/tables/connections-table';
 import { Button } from '@/components/ui/button';
 import { ConnectionForm } from '@/components/workspace/connection-form';
@@ -13,6 +16,7 @@ import connectionService from '@/services/connection.service';
 
 export default function WorkspacePage() {
   const router = useRouter();
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
   const paginationParams = useMemo<PaginationParams>(
@@ -60,6 +64,12 @@ export default function WorkspacePage() {
       setEditingConnection(undefined);
     }
   }, []);
+
+  // Show loader only while auth is resolving — connections are already fetching in parallel.
+  // Once auth resolves: if not authenticated, AuthProvider redirects; if authenticated, data may already be cached.
+  if (isAuthLoading || !isAuthenticated) {
+    return <PageLoader />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -317,7 +317,7 @@ export default function TablesPage({ params }: TablesPageProps) {
     setIsDeleting(true);
     const rowsToDelete = Array.from(selectedRows)
       .map((i) => tableData.rows[i])
-      .filter(Boolean);
+      .filter((row): row is Record<string, unknown> => row !== undefined);
 
     try {
       await deleteRows(selectedTable.schema, selectedTable.table, rowsToDelete);

@@ -1,3 +1,3 @@
-export { AuthProvider, ProtectedContent, useAuth } from './auth-provider';
+export { AuthProvider, useAuth } from './auth-provider';
 export { QueryProvider } from './query-provider';
 export { ThemeProvider } from './theme-provider';
