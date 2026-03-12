@@ -354,7 +354,15 @@ export const TableDataGrid = memo(function TableDataGrid({
                     const colInfo = columnInfoMap.get(columnName);
 
                     return (
-                      <td key={cell.id} className="group relative border-r px-3 py-2">
+                      <td
+                        key={cell.id}
+                        className="group relative border-r px-3 py-2"
+                        onDoubleClick={
+                          onCellEdit && !isEditing
+                            ? () => handleStartEdit(index, columnName)
+                            : undefined
+                        }
+                      >
                         {onCellEdit ? (
                           <EditableCell
                             value={cellValue}

@@ -50,6 +50,31 @@ interface TableFiltersProps {
   onFiltersChange: (filters: TableFilter[]) => void;
 }
 
+function ActiveFilter({
+  filter,
+  onRemove,
+}: {
+  filter: TableFilter;
+  onRemove: (id: string) => void;
+}) {
+  const operatorLabel = OPERATORS.find((op) => op.value === filter.operator)?.label;
+  return (
+    <div className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1.5 text-sm">
+      <span className="font-mono font-medium">{filter.column}</span>
+      <span className="text-muted-foreground">{operatorLabel}</span>
+      {filter.value && <span className="font-mono text-primary">&quot;{filter.value}&quot;</span>}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="ml-auto size-5 shrink-0"
+        onClick={() => onRemove(filter.id)}
+      >
+        <XIcon className="size-3" />
+      </Button>
+    </div>
+  );
+}
+
 export const TableFilters = memo(function TableFilters({
   columns,
   filters,
@@ -115,59 +140,47 @@ export const TableFilters = memo(function TableFilters({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[400px] p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium">Filters</h4>
-            {filters.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={handleClearAll}
-              >
-                Clear all
-              </Button>
-            )}
-          </div>
+      <PopoverContent align="start" className="w-[420px] p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h4 className="text-sm font-medium">Filters</h4>
+          {filters.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-muted-foreground"
+              onClick={handleClearAll}
+            >
+              Clear all
+            </Button>
+          )}
+        </div>
 
+        <div className="p-4 space-y-4">
           {/* Active filters */}
           {filters.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {filters.map((filter) => (
-                <div
-                  key={filter.id}
-                  className="flex items-center gap-2 rounded-md bg-muted p-2 text-sm"
-                >
-                  <span className="font-mono">{filter.column}</span>
-                  <span className="text-muted-foreground">
-                    {OPERATORS.find((op) => op.value === filter.operator)?.label}
-                  </span>
-                  {filter.value && <span className="font-mono text-primary">"{filter.value}"</span>}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="ml-auto size-5"
-                    onClick={() => handleRemoveFilter(filter.id)}
-                  >
-                    <XIcon className="size-3" />
-                  </Button>
-                </div>
+                <ActiveFilter key={filter.id} filter={filter} onRemove={handleRemoveFilter} />
               ))}
             </div>
           )}
 
-          {/* Add new filter */}
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Add filter</p>
-            <div className="flex gap-2">
+          {/* New filter form */}
+          <div className="space-y-2.5">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Add filter
+            </p>
+
+            {/* Column + Operator row */}
+            <div className="grid grid-cols-2 gap-2">
               <Select
                 value={newFilter.column}
                 onValueChange={(value) =>
                   value && setNewFilter((prev) => ({ ...prev, column: value }))
                 }
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger size="sm">
                   <SelectValue placeholder="Column" />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +198,7 @@ export const TableFilters = memo(function TableFilters({
                   setNewFilter((prev) => ({ ...prev, operator: value as FilterOperator }))
                 }
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger size="sm">
                   <SelectValue placeholder="Operator" />
                 </SelectTrigger>
                 <SelectContent>
@@ -196,10 +209,13 @@ export const TableFilters = memo(function TableFilters({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              {currentOperator?.needsValue && (
+            {/* Value + Add button row */}
+            <div className="flex gap-2">
+              {currentOperator?.needsValue ? (
                 <Input
-                  placeholder="Value"
+                  placeholder="Enter value..."
                   value={newFilter.value || ''}
                   onChange={(e) => setNewFilter((prev) => ({ ...prev, value: e.target.value }))}
                   className="flex-1"
@@ -209,10 +225,15 @@ export const TableFilters = memo(function TableFilters({
                     }
                   }}
                 />
+              ) : (
+                <div className="flex flex-1 items-center rounded-md border bg-muted/30 px-3 text-sm text-muted-foreground">
+                  No value needed
+                </div>
               )}
 
-              <Button size="icon" onClick={handleAddFilter}>
+              <Button size="sm" onClick={handleAddFilter} className="shrink-0">
                 <PlusIcon className="size-4" />
+                Add
               </Button>
             </div>
           </div>

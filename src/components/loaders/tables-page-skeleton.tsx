@@ -84,12 +84,7 @@ export const TablesPageSkeleton = memo(function TablesPageSkeleton(): React.Reac
     <div className="flex h-full">
       {/* Schema Sidebar */}
       <aside className="w-64 shrink-0 border-r">
-        <SchemaExplorerSkeleton
-          schemaCount={2}
-          tablesPerSchema={5}
-          expandedSchema
-          expandedTable={false}
-        />
+        <SchemaExplorerSkeleton />
       </aside>
 
       {/* Table Data View */}
@@ -112,12 +107,7 @@ export const TablesEmptyStateSkeleton = memo(
       <div className="flex h-full">
         {/* Schema Sidebar */}
         <aside className="w-64 shrink-0 border-r">
-          <SchemaExplorerSkeleton
-            schemaCount={2}
-            tablesPerSchema={5}
-            expandedSchema
-            expandedTable={false}
-          />
+          <SchemaExplorerSkeleton />
         </aside>
 
         {/* Empty State */}

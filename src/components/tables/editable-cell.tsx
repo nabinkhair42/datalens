@@ -28,7 +28,7 @@ function getEditorType(columnInfo?: ColumnInfo): EditorType {
     return 'boolean';
   }
 
-  if (columnInfo.enumValues && columnInfo.enumValues.length > 0) {
+  if (Array.isArray(columnInfo.enumValues) && columnInfo.enumValues.length > 0) {
     return 'enum';
   }
 
@@ -93,7 +93,15 @@ interface EnumEditorProps extends SubEditorProps {
   nullable: boolean;
 }
 
-function EnumEditor({ value, onChange, onSave, enumValues, nullable, isSaving }: EnumEditorProps) {
+function EnumEditor({
+  value,
+  onChange,
+  onSave,
+  enumValues: rawEnumValues,
+  nullable,
+  isSaving,
+}: EnumEditorProps) {
+  const enumValues = Array.isArray(rawEnumValues) ? rawEnumValues : [];
   return (
     <Select
       value={value || '__null__'}
@@ -453,19 +461,18 @@ export const EditableCell = memo(function EditableCell({
   }
 
   return (
-    <button
-      type="button"
-      className={cn(
-        'group/cell max-w-[300px] truncate cursor-pointer rounded px-1 -mx-1 hover:bg-accent/50 text-left',
-        'font-mono text-sm inline-flex items-center gap-1',
-      )}
-      onDoubleClick={onStartEdit}
-      title="Double-click to edit"
-    >
-      <span className="truncate">
+    <div className="flex items-center font-mono text-sm">
+      <span className="max-w-[300px] truncate">
         <CellDisplayValue value={value} />
       </span>
-      <PencilIcon className="size-3 shrink-0 text-muted-foreground opacity-0 group-hover/cell:opacity-100 transition-opacity" />
-    </button>
+      <button
+        type="button"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={onStartEdit}
+        title="Edit cell"
+      >
+        <PencilIcon className="size-3 text-muted-foreground" />
+      </button>
+    </div>
   );
 });

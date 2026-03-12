@@ -83,7 +83,7 @@ export const ExportMenu = memo(function ExportMenu({
           </Button>
         }
       />
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className={'w-40'}>
         <DropdownMenuItem className="gap-2" onSelect={exportCSV}>
           <FileSpreadsheetIcon className="size-4" />
           Export as CSV

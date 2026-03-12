@@ -99,7 +99,7 @@ export const SchemaExplorer = memo(function SchemaExplorer({
   }, []);
 
   if (isLoading) {
-    return <SchemaExplorerSkeleton schemaCount={1} tablesPerSchema={8} expandedSchema />;
+    return <SchemaExplorerSkeleton />;
   }
 
   if (schemas.length === 0) {
