@@ -10,7 +10,8 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { DeleteConnectionDialog } from '@/components/dialogs/delete-connection-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -43,15 +44,19 @@ export const ConnectionsTable = memo(function ConnectionsTable({
   onCreateNew,
   onHover,
 }: ConnectionsTableProps): React.ReactElement {
-  const handleDelete = useCallback(
-    (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (confirm('Are you sure you want to delete this connection?')) {
-        onDelete(id);
-      }
-    },
-    [onDelete],
-  );
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const handleDeleteClick = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPendingDeleteId(id);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (pendingDeleteId) {
+      onDelete(pendingDeleteId);
+      setPendingDeleteId(null);
+    }
+  }, [pendingDeleteId, onDelete]);
 
   const columns = useMemo<ColumnDef<Connection>[]>(
     () => [
@@ -123,7 +128,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={(e) => handleDelete(row.original.id, e)}
+                onClick={(e) => handleDeleteClick(row.original.id, e)}
                 className="flex gap-2 items-center justify-start text-destructive"
               >
                 <TrashIcon className="size-4" />
@@ -134,38 +139,45 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         ),
       },
     ],
-    [onConnect, onEdit, handleDelete],
+    [onConnect, onEdit, handleDeleteClick],
   );
 
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      isLoading={isLoading ?? false}
-      searchPlaceholder="Search connections..."
-      enableGlobalFilter
-      enablePagination
-      pageSize={10}
-      onRowClick={onConnect}
-      onRowHover={onHover}
-      emptyState={{
-        icon: <DatabaseIcon className="size-12" />,
-        title: 'No connections yet',
-        description: 'Create your first database connection to get started',
-        action: onCreateNew ? (
-          <Button onClick={onCreateNew}>
-            <PlusIcon className="size-4" />
-            New Connection
-          </Button>
-        ) : (
-          <Button asChild>
-            <Link href="/connections/new">
+    <>
+      <DeleteConnectionDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        onConfirm={handleDeleteConfirm}
+      />
+      <DataTable
+        columns={columns}
+        data={data}
+        isLoading={isLoading ?? false}
+        searchPlaceholder="Search connections..."
+        enableGlobalFilter
+        enablePagination
+        pageSize={10}
+        onRowClick={onConnect}
+        onRowHover={onHover}
+        emptyState={{
+          icon: <DatabaseIcon className="size-12" />,
+          title: 'No connections yet',
+          description: 'Create your first database connection to get started',
+          action: onCreateNew ? (
+            <Button onClick={onCreateNew}>
               <PlusIcon className="size-4" />
               New Connection
-            </Link>
-          </Button>
-        ),
-      }}
-    />
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/connections/new">
+                <PlusIcon className="size-4" />
+                New Connection
+              </Link>
+            </Button>
+          ),
+        }}
+      />
+    </>
   );
 });

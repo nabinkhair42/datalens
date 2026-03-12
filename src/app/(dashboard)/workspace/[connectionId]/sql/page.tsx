@@ -1,5 +1,6 @@
 'use client';
 
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { ClockIcon, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
@@ -223,6 +224,21 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     [deleteSavedQuery],
   );
 
+  // --- Keyboard shortcuts ---
+  // Ctrl+S / Cmd+S: Open save query dialog
+  useHotkey('Mod+S', (e) => {
+    e.preventDefault();
+    if (query.trim()) {
+      setSaveDialogOpen(true);
+    }
+  });
+
+  // Ctrl+Enter / Cmd+Enter: Execute query (backup — CodeMirror handles this when focused)
+  useHotkey('Mod+Enter', (e) => {
+    e.preventDefault();
+    handleExecute();
+  });
+
   return (
     <div className="flex h-full">
       {/* Left Sidebar - Saved & History */}
@@ -391,8 +407,15 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
             </Dialog>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Press Cmd/Ctrl + Enter to run</span>
+          <div className="flex items-center gap-3">
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              ⌘/Ctrl + Enter
+            </kbd>
+            <span className="text-xs text-muted-foreground">Run</span>
+            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              ⌘/Ctrl + S
+            </kbd>
+            <span className="text-xs text-muted-foreground">Save</span>
           </div>
         </div>
 

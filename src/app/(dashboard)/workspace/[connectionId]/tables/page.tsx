@@ -1,5 +1,6 @@
 'use client';
 
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, TrashIcon } from 'lucide-react';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import {
   TableFilters,
 } from '@/components/tables/table-filters';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
 import type { ColumnInfo } from '@/server/db-adapters/types';
@@ -62,6 +64,7 @@ export default function TablesPage({ params }: TablesPageProps) {
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // rerender-use-ref-transient-values: Stabilize loadTableData by keeping mutation
   // and visibleColumns in refs. Without this, loadTableData is recreated every render
@@ -312,18 +315,19 @@ export default function TablesPage({ params }: TablesPageProps) {
     [connectionId, buildRowWhereClause],
   );
 
-  const handleDeleteSelected = useCallback(async () => {
+  const handleDeletePrompt = useCallback(() => {
+    if (selectedTable && selectedRows.size > 0) {
+      setDeleteDialogOpen(true);
+    }
+  }, [selectedTable, selectedRows.size]);
+
+  const handleDeleteConfirm = useCallback(async () => {
     if (!selectedTable || selectedRows.size === 0) {
       return;
     }
 
-    const count = selectedRows.size;
-    const message = `Are you sure you want to delete ${count} record${count > 1 ? 's' : ''}?`;
-    if (!window.confirm(message)) {
-      return;
-    }
-
     setIsDeleting(true);
+    const count = selectedRows.size;
     const rowsToDelete = Array.from(selectedRows)
       .map((i) => tableData.rows[i])
       .filter((row): row is Record<string, unknown> => row !== undefined);
@@ -355,6 +359,20 @@ export default function TablesPage({ params }: TablesPageProps) {
   }, [selectedTable, schemas, tableData.columnInfo]);
 
   const totalPages = Math.ceil(tableData.totalRows / pagination.pageSize);
+
+  // --- Keyboard shortcuts ---
+  // Ctrl+R / Cmd+R: Refresh table data
+  useHotkey('Mod+R', (e) => {
+    e.preventDefault();
+    handleRefresh();
+  });
+
+  // Delete / Backspace: Open delete dialog for selected rows
+  useHotkey('Delete', () => handleDeletePrompt());
+  useHotkey('Backspace', () => handleDeletePrompt());
+
+  // Escape: Deselect all rows
+  useHotkey('Escape', () => setSelectedRows(new Set()));
 
   return (
     <div className="flex h-full">
@@ -407,7 +425,7 @@ export default function TablesPage({ params }: TablesPageProps) {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={handleDeleteSelected}
+                    onClick={handleDeletePrompt}
                     disabled={isDeleting}
                   >
                     <TrashIcon className="size-4" />
@@ -483,6 +501,17 @@ export default function TablesPage({ params }: TablesPageProps) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Records"
+        description={`Are you sure you want to delete ${selectedRows.size} record${selectedRows.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

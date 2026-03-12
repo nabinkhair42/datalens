@@ -3,6 +3,7 @@ import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { HotkeysProvider } from '@/components/providers/hotkeys-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 
@@ -34,7 +35,9 @@ export default function RootLayout({
       <body className={`${geistSans.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <HotkeysProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </HotkeysProvider>
           </QueryProvider>
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
