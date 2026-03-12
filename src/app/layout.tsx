@@ -22,6 +22,18 @@ export const metadata: Metadata = {
   },
   description: 'The web-native, collaborative database IDE. Figma for your database.',
   keywords: ['database', 'sql', 'postgresql', 'mysql', 'visualization', 'ide'],
+  openGraph: {
+    title: APP_NAME,
+    description: 'The web-native, collaborative database IDE. Figma for your database.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'DataLens' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: APP_NAME,
+    description: 'The web-native, collaborative database IDE. Figma for your database.',
+    images: ['/og-image.png'],
+  },
 };
 
 export default function RootLayout({

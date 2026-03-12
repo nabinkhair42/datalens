@@ -14,6 +14,8 @@ Query, visualize, and manage your databases with a modern interface that works a
 ![Biome](https://img.shields.io/badge/Biome-60A5FA?style=flat&logo=biome&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)
 
+![DataLens](public/og-image.png)
+
 ## Features
 
 ### SQL Editor
