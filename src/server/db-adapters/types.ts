@@ -30,6 +30,7 @@ export interface ColumnInfo {
   isPrimaryKey?: boolean | undefined;
   isForeignKey?: boolean | undefined;
   defaultValue?: string | undefined;
+  enumValues?: string[] | undefined;
 }
 
 export interface DatabaseAdapter {

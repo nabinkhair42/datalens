@@ -99,6 +99,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
           pc.reltuples::bigint AS row_estimate,
           c.column_name,
           c.data_type,
+          c.udt_name,
           c.is_nullable,
           c.column_default,
           c.ordinal_position,
@@ -117,7 +118,13 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
             WHERE tc.constraint_type = 'FOREIGN KEY'
               AND tc.table_schema = t.table_schema AND tc.table_name = t.table_name
               AND kcu.column_name = c.column_name
-          ) AS is_foreign_key
+          ) AS is_foreign_key,
+          (
+            SELECT array_agg(e.enumlabel ORDER BY e.enumsortorder)
+            FROM pg_type pt
+            JOIN pg_enum e ON e.enumtypid = pt.oid
+            WHERE pt.typname = c.udt_name AND c.data_type = 'USER-DEFINED'
+          ) AS enum_values
         FROM information_schema.tables t
         JOIN information_schema.columns c
           ON c.table_schema = t.table_schema AND c.table_name = t.table_name
@@ -153,13 +160,16 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
           tableMap.set(tableName, tableEntry);
         }
 
+        const dataType = row.data_type as string;
         tableEntry.columns.push({
           name: row.column_name as string,
-          type: row.data_type as string,
+          // Use udt_name for USER-DEFINED types (enums) so the header shows the actual type name
+          type: dataType === 'USER-DEFINED' ? (row.udt_name as string) : dataType,
           nullable: row.is_nullable === 'YES',
           isPrimaryKey: row.is_primary_key as boolean,
           isForeignKey: row.is_foreign_key as boolean,
           defaultValue: row.column_default as string | undefined,
+          enumValues: (row.enum_values as string[] | null) ?? undefined,
         });
       }
 
@@ -193,6 +203,7 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       SELECT
         c.column_name,
         c.data_type,
+        c.udt_name,
         c.is_nullable,
         c.column_default,
         EXISTS (
@@ -210,7 +221,13 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
           WHERE tc.constraint_type = 'FOREIGN KEY'
             AND tc.table_schema = c.table_schema AND tc.table_name = c.table_name
             AND kcu.column_name = c.column_name
-        ) as is_foreign_key
+        ) as is_foreign_key,
+        (
+          SELECT array_agg(e.enumlabel ORDER BY e.enumsortorder)
+          FROM pg_type pt
+          JOIN pg_enum e ON e.enumtypid = pt.oid
+          WHERE pt.typname = c.udt_name AND c.data_type = 'USER-DEFINED'
+        ) as enum_values
       FROM information_schema.columns c
       WHERE c.table_schema = $1 AND c.table_name = $2
       ORDER BY c.ordinal_position
@@ -218,14 +235,18 @@ export class PostgreSQLAdapter implements DatabaseAdapter {
       [schema, table],
     );
 
-    return columnsResult.rows.map((row) => ({
-      name: row.column_name as string,
-      type: row.data_type as string,
-      nullable: row.is_nullable === 'YES',
-      isPrimaryKey: row.is_primary_key as boolean,
-      isForeignKey: row.is_foreign_key as boolean,
-      defaultValue: row.column_default as string | undefined,
-    }));
+    return columnsResult.rows.map((row) => {
+      const dataType = row.data_type as string;
+      return {
+        name: row.column_name as string,
+        type: dataType === 'USER-DEFINED' ? (row.udt_name as string) : dataType,
+        nullable: row.is_nullable === 'YES',
+        isPrimaryKey: row.is_primary_key as boolean,
+        isForeignKey: row.is_foreign_key as boolean,
+        defaultValue: row.column_default as string | undefined,
+        enumValues: (row.enum_values as string[] | null) ?? undefined,
+      };
+    });
   }
 
   async getTableColumns(schema: string, table: string): Promise<ColumnInfo[]> {

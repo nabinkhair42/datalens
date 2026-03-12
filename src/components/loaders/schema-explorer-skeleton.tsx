@@ -13,10 +13,8 @@ const TableNodeSkeleton = memo(function TableNodeSkeleton({
 }: TableNodeSkeletonProps): React.ReactElement {
   return (
     <div>
-      <div className="flex items-center gap-1.5 rounded-md px-2 py-1 pl-5">
-        <Skeleton className="size-4 shrink-0" />
-        <Skeleton className="size-4 shrink-0" />
-        <Skeleton className="h-4 w-20" />
+      <div className="flex items-center gap-1.5 rounded-md px-2 py-1 pl-2">
+        <Skeleton className="size-4 shrink-0 w-full h-6" />
       </div>
       {isExpanded && (
         <div className="border-l ml-3 pl-2">
@@ -59,23 +57,16 @@ export const SchemaExplorerSkeleton = memo(function SchemaExplorerSkeleton({
       {/* Tree structure */}
       <div className="flex-1 overflow-auto p-2">
         {Array.from({ length: schemaCount }).map((_, schemaIndex) => (
-          <div key={schemaIndex}>
+          <div key={schemaIndex} className="mb-1">
             {/* Schema node */}
             <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
               <Skeleton className="size-4 shrink-0" />
-              <Skeleton className="size-4 shrink-0" />
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
             </div>
-
-            {/* Tables within schema */}
             {expandedSchema && (
-              <div className="border-l ml-3 pl-2">
+              <div className="ml-3 border-l pl-2">
                 {Array.from({ length: tablesPerSchema }).map((_, tableIndex) => (
-                  <TableNodeSkeleton
-                    key={tableIndex}
-                    isExpanded={expandedTable && tableIndex === 0}
-                    columnCount={tableIndex === 0 ? 5 : 4}
-                  />
+                  <TableNodeSkeleton key={tableIndex} isExpanded={expandedTable} />
                 ))}
               </div>
             )}

@@ -7,6 +7,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { TableDataGridSkeleton } from '@/components/loaders';
 import { EditableCell } from '@/components/tables/editable-cell';
 import { cn } from '@/lib/utils';
+import type { ColumnInfo } from '@/server/db-adapters/types';
 
 export interface SortConfig {
   column: string;
@@ -19,12 +20,6 @@ export interface CellEdit {
   oldValue: unknown;
   newValue: string;
   rowData: Record<string, unknown>;
-}
-
-export interface ColumnInfo {
-  name: string;
-  type: string;
-  nullable?: boolean;
 }
 
 interface TableDataGridProps {
@@ -86,12 +81,12 @@ export const TableDataGrid = memo(function TableDataGrid({
     [selectedRows, onSelectionChange],
   );
 
-  // Create a map of column name to type for quick lookup
-  const columnTypeMap = useMemo(() => {
+  // Create a map of column name to full ColumnInfo for quick lookup
+  const columnInfoMap = useMemo(() => {
     if (!columnInfo) {
-      return new Map<string, string>();
+      return new Map<string, ColumnInfo>();
     }
-    return new Map(columnInfo.map((col) => [col.name, col.type]));
+    return new Map(columnInfo.map((col) => [col.name, col]));
   }, [columnInfo]);
 
   // Filter columns by visibility
@@ -128,7 +123,7 @@ export const TableDataGrid = memo(function TableDataGrid({
         const isSorted = sortConfig?.column === col;
         const isAsc = isSorted && sortConfig?.direction === 'asc';
         const isDesc = isSorted && sortConfig?.direction === 'desc';
-        const colType = columnTypeMap.get(col);
+        const colType = columnInfoMap.get(col)?.type;
 
         return (
           <button
@@ -162,7 +157,7 @@ export const TableDataGrid = memo(function TableDataGrid({
       },
       size: 200,
     }));
-  }, [displayColumns, sortConfig, handleSort, columnTypeMap]);
+  }, [displayColumns, sortConfig, handleSort, columnInfoMap]);
 
   const table = useReactTable({
     data,
@@ -217,6 +212,32 @@ export const TableDataGrid = memo(function TableDataGrid({
     [onCellEdit],
   );
 
+  // Tab navigation: flatten grid into a linear index and step forward/backward
+  const handleTabNavigation = useCallback(
+    (rowIndex: number, column: string, shiftKey: boolean) => {
+      const colIdx = displayColumns.indexOf(column);
+      if (colIdx === -1 || displayColumns.length === 0) {
+        return;
+      }
+
+      const totalCols = displayColumns.length;
+      const flatIdx = rowIndex * totalCols + colIdx;
+      const nextIdx = flatIdx + (shiftKey ? -1 : 1);
+      const totalCells = data.length * totalCols;
+
+      if (nextIdx < 0 || nextIdx >= totalCells) {
+        return;
+      }
+
+      const nextRow = Math.floor(nextIdx / totalCols);
+      const nextColName = displayColumns[nextIdx % totalCols];
+      if (nextColName) {
+        setEditingCell({ rowIndex: nextRow, column: nextColName });
+      }
+    },
+    [displayColumns, data.length],
+  );
+
   // Show full skeleton when loading without existing columns
   if (isLoading && columns.length === 0) {
     return <TableDataGridSkeleton />;
@@ -254,7 +275,7 @@ export const TableDataGrid = memo(function TableDataGrid({
               const isSorted = sortConfig?.column === col;
               const isAsc = isSorted && sortConfig?.direction === 'asc';
               const isDesc = isSorted && sortConfig?.direction === 'desc';
-              const colType = columnTypeMap.get(col);
+              const colType = columnInfoMap.get(col)?.type;
 
               return (
                 <th
@@ -330,20 +351,21 @@ export const TableDataGrid = memo(function TableDataGrid({
                     const cellValue = cell.getValue();
                     const isEditing =
                       editingCell?.rowIndex === index && editingCell?.column === columnName;
+                    const colInfo = columnInfoMap.get(columnName);
 
                     return (
                       <td key={cell.id} className="group relative border-r px-3 py-2">
                         {onCellEdit ? (
                           <EditableCell
                             value={cellValue}
-                            rowIndex={index}
-                            column={columnName}
+                            columnInfo={colInfo}
                             isEditing={isEditing}
                             onStartEdit={() => handleStartEdit(index, columnName)}
                             onSave={(newValue) =>
                               handleSaveEdit(index, columnName, cellValue, newValue, row.original)
                             }
                             onCancel={handleCancelEdit}
+                            onTab={(shiftKey) => handleTabNavigation(index, columnName, shiftKey)}
                           />
                         ) : (
                           <>

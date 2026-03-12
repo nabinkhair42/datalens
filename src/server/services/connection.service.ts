@@ -11,7 +11,7 @@ import type {
   PaginatedConnections,
   PaginationParams,
 } from '@/schemas/connection.schema';
-import { type ConnectionConfig, createAdapter } from '@/server/db-adapters';
+import { type ConnectionConfig, createAdapter, getAdapter } from '@/server/db-adapters';
 
 type ConnectionUpdateData = { [K in keyof ConnectionFormData]?: ConnectionFormData[K] | undefined };
 
@@ -297,11 +297,8 @@ export const connectionServerService = {
     data: { [K in keyof ConnectionFormData]?: ConnectionFormData[K] | undefined },
     userId: string,
   ): Promise<Connection | null> {
-    const existing = await this.get(id, userId);
-    if (!existing) {
-      return null;
-    }
-
+    // Single UPDATE + RETURNING — no need for a separate SELECT first.
+    // If the row doesn't exist or doesn't belong to this user, rows will be empty.
     const updateData = buildConnectionUpdateData(data);
     const rows = await db
       .update(connections)
@@ -335,21 +332,35 @@ export const connectionServerService = {
     id: string,
     userId: string,
   ): Promise<{ success: boolean; latency?: number; version?: string; error?: string }> {
-    const connection = await this.getWithCredentials(id, userId);
-    if (!connection) {
+    // Use cached connection config instead of getWithCredentials (avoids extra DB query
+    // when config is already in LRU cache from recent schema/query calls)
+    const config = await getCachedConnectionConfig(id, userId);
+    if (!config) {
       return { success: false, error: 'Connection not found' };
     }
 
-    return this.testConnectionConfig({
-      id: connection.id,
-      type: connection.type as 'postgresql' | 'mysql' | 'sqlite',
-      host: connection.host,
-      port: connection.port,
-      database: connection.database,
-      username: connection.username,
-      password: connection.password,
-      ssl: connection.ssl,
-    });
+    // Use cached adapter pool for saved connections — avoids creating a new pool.
+    // testConnectionConfig creates + closes a fresh pool (correct for unsaved test configs).
+    const startTime = Date.now();
+    try {
+      const adapter = await getAdapter(config);
+      const versionResult = await adapter.executeQuery('SELECT version()');
+      const latency = Date.now() - startTime;
+
+      if (config.type === 'postgresql') {
+        const versionString = versionResult.rows[0]?.['version'] as string | undefined;
+        const version = this.extractPostgresVersion(versionString);
+        return version ? { success: true, latency, version } : { success: true, latency };
+      }
+
+      return { success: true, latency };
+    } catch (error) {
+      return {
+        success: false,
+        latency: Date.now() - startTime,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
   },
 
   // Test connection config (combines test + version in single query for PostgreSQL)

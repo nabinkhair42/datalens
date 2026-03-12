@@ -2,7 +2,7 @@
 
 import { ClockIcon, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { use, useCallback, useRef, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 
 import { QueryResults } from '@/components/editor/query-results';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,9 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   // rerender-use-ref-transient-values: Keep results in a ref so export/copy
   // callbacks have stable references and don't cause QueryResults to re-render.
   const resultsRef = useRef(results);
-  resultsRef.current = results;
+  useEffect(() => {
+    resultsRef.current = results;
+  });
 
   const handleExecute = useCallback(async () => {
     if (!query.trim()) {
