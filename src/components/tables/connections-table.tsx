@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useCallback, useMemo, useState } from 'react';
-import { DeleteConnectionDialog } from '@/components/dialogs/delete-connection-dialog';
+import { DeleteConnectionDialog } from '@/components/dialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';

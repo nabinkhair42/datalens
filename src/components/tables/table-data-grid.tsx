@@ -5,7 +5,7 @@ import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, CopyIcon } from 'lucide
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import { TableDataGridSkeleton } from '@/components/loaders';
-import { EditableCell } from '@/components/tables/editable-cell';
+import { EditableCell } from '@/components/tables';
 import { cn } from '@/lib/utils';
 import type { ColumnInfo } from '@/server/db-adapters/types';
 

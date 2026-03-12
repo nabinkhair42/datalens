@@ -41,7 +41,7 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Left Panel - Branding */}
-      <div className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
+      <div className="relative hidden flex-col justify-between bg-muted p-10 lg:flex">
         <div className="flex items-center gap-2 text-lg font-medium">
           <Database className="size-6" />
           <span>DataLens</span>

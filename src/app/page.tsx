@@ -1,6 +1,5 @@
 import {
   ArrowRightIcon,
-  DatabaseIcon,
   GitBranchIcon,
   LayersIcon,
   TerminalSquareIcon,
@@ -8,6 +7,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -40,10 +40,10 @@ export default function LandingPage() {
       <header className="border-b">
         <div className="max-w-5xl mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <DatabaseIcon className="size-5 text-primary" />
+            <DataLensLogo className="size-6" />
             <span className="font-semibold">DataLens</span>
           </div>
-          <Button variant="ghost">
+          <Button>
             <Link href="/login">Sign In</Link>
           </Button>
         </div>
@@ -88,14 +88,6 @@ export default function LandingPage() {
           ))}
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t py-6">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 text-sm text-muted-foreground">
-          <p>Built with Next.js, CodeMirror, and TanStack</p>
-          <p>Open Source</p>
-        </div>
-      </footer>
     </div>
   );
 }

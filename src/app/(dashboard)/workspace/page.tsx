@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { PageLoader } from '@/components/loaders/spinner';
 import { useAuth } from '@/components/providers/auth-provider';
-import { ConnectionsTable } from '@/components/tables/connections-table';
+import { ConnectionsTable } from '@/components/tables';
 import { Button } from '@/components/ui/button';
 import { ConnectionForm } from '@/components/workspace/connection-form';
 import { QUERY_KEYS } from '@/config/constants';

@@ -12,17 +12,19 @@ import {
 } from 'lucide-react';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { DeleteRecordsDialog } from '@/components/dialogs/delete-records-dialog';
+import { DeleteRecordsDialog } from '@/components/dialogs';
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
-import { buildInsertQuery } from '@/components/tables/add-record-dialog';
-import { ColumnVisibility } from '@/components/tables/column-visibility';
-import { ExportMenu } from '@/components/tables/export-menu';
-import { type CellEdit, type SortConfig, TableDataGrid } from '@/components/tables/table-data-grid';
 import {
+  buildInsertQuery,
   buildWhereClause,
+  type CellEdit,
+  ColumnVisibility,
+  ExportMenu,
+  type SortConfig,
+  TableDataGrid,
   type TableFilter,
   TableFilters,
-} from '@/components/tables/table-filters';
+} from '@/components/tables';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useConnectionSchema } from '@/hooks/use-connections';

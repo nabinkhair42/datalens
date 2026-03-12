@@ -1,20 +1,19 @@
 import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
-
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { HotkeysProvider } from '@/components/providers/hotkeys-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
-
 import './globals.css';
-import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
+import { Outfit } from 'next/font/google';
 
-const geistSans = Poppins({
+const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--font-geist-sans',
-  weight: ['400', '500', '600'],
+  variable: '--font-outfit',
+  display: 'swap',
 });
+
+import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 
 export const metadata: Metadata = {
   title: {
@@ -32,7 +31,7 @@ export default function RootLayout({
 }>): React.ReactElement {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} antialiased`} suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${outfit.variable}`}>
         <ThemeProvider>
           <QueryProvider>
             <HotkeysProvider>

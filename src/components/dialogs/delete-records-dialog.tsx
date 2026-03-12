@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 
-import { ConfirmDialog } from '@/components/dialogs/confirm-dialog';
+import { ConfirmDialog } from '@/components/dialogs';
 
 interface DeleteRecordsDialogProps {
   open: boolean;
