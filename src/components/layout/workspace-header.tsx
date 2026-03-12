@@ -172,26 +172,23 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2">
-        <nav className="flex items-center gap-1">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            const isSqlTab = item.label === 'SQL Editor';
-            return (
-              <ButtonGroup key={item.href}>
-                <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
-                  onClick={() => navigateTo(item.href)}
-                  onMouseEnter={isSqlTab ? handleSqlTabHover : undefined}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Button>
-              </ButtonGroup>
-            );
-          })}
-        </nav>
-      </div>
+      <ButtonGroup aria-label="Workspace navigation">
+        {navItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          const isSqlTab = item.label === 'SQL Editor';
+          return (
+            <Button
+              key={item.href}
+              variant={isActive ? 'default' : 'outline'}
+              onClick={() => navigateTo(item.href)}
+              onMouseEnter={isSqlTab ? handleSqlTabHover : undefined}
+            >
+              <item.icon className="size-4" />
+              {item.label}
+            </Button>
+          );
+        })}
+      </ButtonGroup>
     </header>
   );
 });

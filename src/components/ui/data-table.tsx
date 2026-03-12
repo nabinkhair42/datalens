@@ -17,6 +17,7 @@ import { useState } from 'react';
 
 import { DataTableSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { cn } from '@/lib/utils';
 
 export interface DataTableProps<TData, TValue> {
@@ -180,26 +181,24 @@ export function DataTable<TData, TValue>({
                 {Math.min((table.getState().pagination.pageIndex + 1) * pageSize, filteredRowCount)}{' '}
                 of {filteredRowCount} results
               </p>
-              <div className="flex items-center gap-2">
+              <ButtonGroup aria-label="Pagination">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon-sm"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
                   <ChevronLeftIcon className="size-4" />
-                  Previous
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon-sm"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  Next
                   <ChevronRightIcon className="size-4" />
                 </Button>
-              </div>
+              </ButtonGroup>
             </div>
           )}
         </>

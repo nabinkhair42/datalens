@@ -1,12 +1,20 @@
 'use client';
 
 import { useHotkey } from '@tanstack/react-hotkeys';
-import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, TrashIcon } from 'lucide-react';
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  TrashIcon,
+  XIcon,
+} from 'lucide-react';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DeleteRecordsDialog } from '@/components/dialogs/delete-records-dialog';
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
-import { AddRecordDialog, buildInsertQuery } from '@/components/tables/add-record-dialog';
+import { buildInsertQuery } from '@/components/tables/add-record-dialog';
 import { ColumnVisibility } from '@/components/tables/column-visibility';
 import { ExportMenu } from '@/components/tables/export-menu';
 import { type CellEdit, type SortConfig, TableDataGrid } from '@/components/tables/table-data-grid';
@@ -64,6 +72,8 @@ export default function TablesPage({ params }: TablesPageProps) {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingRow, setPendingRow] = useState<Record<string, string> | null>(null);
+  const [isInserting, setIsInserting] = useState(false);
 
   // rerender-use-ref-transient-values: Stabilize loadTableData by keeping mutation
   // and visibleColumns in refs. Without this, loadTableData is recreated every render
@@ -233,18 +243,33 @@ export default function TablesPage({ params }: TablesPageProps) {
     [selectedTable, pagination.pageSize, filters, loadTableData],
   );
 
-  const handleInsertRecord = useCallback(
-    async (values: Record<string, string>) => {
-      if (!selectedTable) {
-        return;
-      }
-      const query = buildInsertQuery(selectedTable.schema, selectedTable.table, values);
+  const handleAddRow = useCallback(() => {
+    if (selectedTable && !pendingRow) {
+      setPendingRow({});
+    }
+  }, [selectedTable, pendingRow]);
+
+  const handleDiscardRow = useCallback(() => {
+    setPendingRow(null);
+  }, []);
+
+  const handleSaveRow = useCallback(async () => {
+    if (!selectedTable || !pendingRow) {
+      return;
+    }
+    setIsInserting(true);
+    try {
+      const query = buildInsertQuery(selectedTable.schema, selectedTable.table, pendingRow);
       await executeQueryRef.current.mutateAsync({ connectionId, query, skipHistory: false });
       toast.success('Record inserted successfully');
+      setPendingRow(null);
       handleRefresh();
-    },
-    [selectedTable, connectionId, handleRefresh],
-  );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to insert record');
+    } finally {
+      setIsInserting(false);
+    }
+  }, [selectedTable, pendingRow, connectionId, handleRefresh]);
 
   const handleCellEdit = useCallback(
     async (edit: CellEdit) => {
@@ -366,12 +391,28 @@ export default function TablesPage({ params }: TablesPageProps) {
     handleRefresh();
   });
 
+  // Ctrl+I / Cmd+I: Insert new row
+  useHotkey('Mod+I', (e) => {
+    e.preventDefault();
+    handleAddRow();
+  });
+
   // Delete / Backspace: Open delete dialog for selected rows
   useHotkey('Delete', () => handleDeletePrompt(), { ignoreInputs: false });
   useHotkey('Backspace', () => handleDeletePrompt(), { ignoreInputs: false });
 
-  // Escape: Deselect all rows
-  useHotkey('Escape', () => setSelectedRows(new Set()), { ignoreInputs: false });
+  // Escape: Discard pending row or deselect all rows
+  useHotkey(
+    'Escape',
+    () => {
+      if (pendingRow) {
+        handleDiscardRow();
+      } else {
+        setSelectedRows(new Set());
+      }
+    },
+    { ignoreInputs: false },
+  );
 
   return (
     <div className="flex h-full">
@@ -415,11 +456,32 @@ export default function TablesPage({ params }: TablesPageProps) {
                   visibleColumns={visibleColumns}
                   onVisibilityChange={setVisibleColumns}
                 />
-                <AddRecordDialog
-                  columns={tableColumnInfo}
-                  onInsert={handleInsertRecord}
-                  disabled={isLoadingData}
-                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddRow}
+                  disabled={isLoadingData || !!pendingRow}
+                >
+                  <PlusIcon className="size-4" />
+                  Add record
+                </Button>
+                {pendingRow && (
+                  <>
+                    <Button size="sm" onClick={handleSaveRow} disabled={isInserting}>
+                      <CheckIcon className="size-4" />
+                      {isInserting ? 'Saving...' : 'Save changes'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDiscardRow}
+                      disabled={isInserting}
+                    >
+                      <XIcon className="size-4" />
+                      Discard changes
+                    </Button>
+                  </>
+                )}
                 {selectedRows.size > 0 && (
                   <Button
                     variant="destructive"
@@ -489,6 +551,8 @@ export default function TablesPage({ params }: TablesPageProps) {
                 onSelectionChange={setSelectedRows}
                 onCellEdit={handleCellEdit}
                 isLoading={isLoadingData}
+                pendingRow={pendingRow}
+                onPendingRowChange={setPendingRow}
               />
             </div>
           </>

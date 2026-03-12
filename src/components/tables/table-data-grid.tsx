@@ -2,7 +2,7 @@
 
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, CopyIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 
 import { TableDataGridSkeleton } from '@/components/loaders';
 import { EditableCell } from '@/components/tables/editable-cell';
@@ -22,6 +22,77 @@ export interface CellEdit {
   rowData: Record<string, unknown>;
 }
 
+// --- Inline new-row cell ---
+
+function NewRowCellInput({
+  column,
+  columnInfo,
+  value,
+  onChange,
+}: {
+  column: string;
+  columnInfo?: ColumnInfo | undefined;
+  value: string;
+  onChange: (column: string, value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const placeholder = columnInfo?.defaultValue ? 'DEFAULT' : 'NULL';
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => onChange(column, e.target.value)}
+      placeholder={placeholder}
+      className="h-7 w-full bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground/60"
+    />
+  );
+}
+
+// --- Pending new row ---
+
+const PendingNewRow = memo(function PendingNewRow({
+  displayColumns,
+  columnInfoMap,
+  pendingRow,
+  onPendingRowChange,
+}: {
+  displayColumns: string[];
+  columnInfoMap: Map<string, ColumnInfo>;
+  pendingRow: Record<string, string>;
+  onPendingRowChange: (row: Record<string, string>) => void;
+}) {
+  const handleCellChange = useCallback(
+    (column: string, value: string) => {
+      onPendingRowChange({ ...pendingRow, [column]: value });
+    },
+    [pendingRow, onPendingRowChange],
+  );
+
+  return (
+    <tr className="border-b bg-green-50 dark:bg-green-950/30">
+      {/* Empty checkbox cell with a new-row indicator */}
+      <td className="border-r px-2 py-2 text-center">
+        <span className="text-xs font-medium text-green-600">NEW</span>
+      </td>
+      {displayColumns.map((col) => {
+        const colInfo = columnInfoMap.get(col);
+        return (
+          <td key={col} className="border-r px-3 py-1.5">
+            <NewRowCellInput
+              column={col}
+              columnInfo={colInfo}
+              value={pendingRow[col] ?? ''}
+              onChange={handleCellChange}
+            />
+          </td>
+        );
+      })}
+    </tr>
+  );
+});
+
 interface TableDataGridProps {
   data: Record<string, unknown>[];
   columns: string[];
@@ -33,6 +104,8 @@ interface TableDataGridProps {
   onSelectionChange?: (selectedRows: Set<number>) => void;
   onCellEdit?: (edit: CellEdit) => Promise<void>;
   isLoading?: boolean | undefined;
+  pendingRow?: Record<string, string> | null | undefined;
+  onPendingRowChange?: ((row: Record<string, string>) => void) | undefined;
 }
 
 export const TableDataGrid = memo(function TableDataGrid({
@@ -46,6 +119,8 @@ export const TableDataGrid = memo(function TableDataGrid({
   onSelectionChange,
   onCellEdit,
   isLoading,
+  pendingRow,
+  onPendingRowChange,
 }: TableDataGridProps) {
   // Track which cell is currently being edited
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string } | null>(null);
@@ -307,6 +382,15 @@ export const TableDataGrid = memo(function TableDataGrid({
           </tr>
         </thead>
         <tbody>
+          {/* Pending new row */}
+          {pendingRow && onPendingRowChange && (
+            <PendingNewRow
+              displayColumns={displayColumns}
+              columnInfoMap={columnInfoMap}
+              pendingRow={pendingRow}
+              onPendingRowChange={onPendingRowChange}
+            />
+          )}
           {isLoading
             ? // Show skeleton rows while loading
               Array.from({ length: 10 }).map((_, index) => (
