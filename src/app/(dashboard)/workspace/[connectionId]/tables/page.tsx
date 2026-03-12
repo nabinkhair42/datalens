@@ -367,11 +367,11 @@ export default function TablesPage({ params }: TablesPageProps) {
   });
 
   // Delete / Backspace: Open delete dialog for selected rows
-  useHotkey('Delete', () => handleDeletePrompt());
-  useHotkey('Backspace', () => handleDeletePrompt());
+  useHotkey('Delete', () => handleDeletePrompt(), { ignoreInputs: false });
+  useHotkey('Backspace', () => handleDeletePrompt(), { ignoreInputs: false });
 
   // Escape: Deselect all rows
-  useHotkey('Escape', () => setSelectedRows(new Set()));
+  useHotkey('Escape', () => setSelectedRows(new Set()), { ignoreInputs: false });
 
   return (
     <div className="flex h-full">
