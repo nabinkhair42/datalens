@@ -24,6 +24,7 @@ import {
   TableFilters,
 } from '@/components/tables/table-filters';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
 import type { ColumnInfo } from '@/server/db-adapters/types';
@@ -260,7 +261,11 @@ export default function TablesPage({ params }: TablesPageProps) {
     setIsInserting(true);
     try {
       const query = buildInsertQuery(selectedTable.schema, selectedTable.table, pendingRow);
-      await executeQueryRef.current.mutateAsync({ connectionId, query, skipHistory: false });
+      await executeQueryRef.current.mutateAsync({
+        connectionId,
+        query,
+        skipHistory: false,
+      });
       toast.success('Record inserted successfully');
       setPendingRow(null);
       handleRefresh();
@@ -301,7 +306,11 @@ export default function TablesPage({ params }: TablesPageProps) {
       const query = `UPDATE "${selectedTable.schema}"."${selectedTable.table}" SET "${edit.column}" = ${formattedValue} WHERE ${whereConditions}`;
 
       try {
-        await executeQueryRef.current.mutateAsync({ connectionId, query, skipHistory: false });
+        await executeQueryRef.current.mutateAsync({
+          connectionId,
+          query,
+          skipHistory: false,
+        });
         toast.success('Cell updated successfully');
         handleRefresh();
       } catch (error) {
@@ -333,7 +342,11 @@ export default function TablesPage({ params }: TablesPageProps) {
       for (const rowData of rows) {
         const whereClause = buildRowWhereClause(rowData);
         const query = `DELETE FROM "${schema}"."${table}" WHERE ${whereClause}`;
-        await executeQueryRef.current.mutateAsync({ connectionId, query, skipHistory: false });
+        await executeQueryRef.current.mutateAsync({
+          connectionId,
+          query,
+          skipHistory: false,
+        });
       }
     },
     [connectionId, buildRowWhereClause],
@@ -434,17 +447,6 @@ export default function TablesPage({ params }: TablesPageProps) {
           <>
             {/* Table Toolbar */}
             <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-              <div className="flex items-center gap-4">
-                <h2 className="font-medium">
-                  {selectedTable.schema}.{selectedTable.table}
-                </h2>
-                {tableData.executionTime !== undefined && (
-                  <span className="text-xs text-muted-foreground">
-                    {tableData.totalRows} rows • {tableData.executionTime}ms
-                  </span>
-                )}
-              </div>
-
               <div className="flex items-center gap-2">
                 <TableFilters
                   columns={tableData.columns}
@@ -458,7 +460,6 @@ export default function TablesPage({ params }: TablesPageProps) {
                 />
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={handleAddRow}
                   disabled={isLoadingData || !!pendingRow}
                 >
@@ -467,30 +468,21 @@ export default function TablesPage({ params }: TablesPageProps) {
                 </Button>
                 {pendingRow && (
                   <>
-                    <Button size="sm" onClick={handleSaveRow} disabled={isInserting}>
+                    <Button onClick={handleSaveRow} disabled={isInserting}>
                       <CheckIcon className="size-4" />
                       {isInserting ? 'Saving...' : 'Save changes'}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDiscardRow}
-                      disabled={isInserting}
-                    >
+                    <Button variant="outline" onClick={handleDiscardRow} disabled={isInserting}>
                       <XIcon className="size-4" />
                       Discard changes
                     </Button>
                   </>
                 )}
                 {selectedRows.size > 0 && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeletePrompt}
-                    disabled={isDeleting}
-                  >
+                  <Button variant="destructive" onClick={handleDeletePrompt} disabled={isDeleting}>
                     <TrashIcon className="size-4" />
-                    Delete {selectedRows.size} record{selectedRows.size > 1 ? 's' : ''}
+                    Delete {selectedRows.size} record
+                    {selectedRows.size > 1 ? 's' : ''}
                   </Button>
                 )}
                 <ExportMenu
@@ -499,42 +491,37 @@ export default function TablesPage({ params }: TablesPageProps) {
                   filename={`${selectedTable.schema}_${selectedTable.table}`}
                   disabled={isLoadingData}
                 />
+              </div>
 
-                {/* Pagination */}
-                <div className="ml-4 flex items-center gap-2 border-l pl-4">
-                  <span className="text-sm text-muted-foreground">
-                    {tableData.totalRows > 0
-                      ? `${pagination.page * pagination.pageSize + 1}-${Math.min(
-                          (pagination.page + 1) * pagination.pageSize,
-                          tableData.totalRows,
-                        )} of ${tableData.totalRows}`
-                      : '0 rows'}
-                  </span>
+              {/* Pagination */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {tableData.totalRows > 0
+                    ? `${pagination.page * pagination.pageSize + 1}-${Math.min(
+                        (pagination.page + 1) * pagination.pageSize,
+                        tableData.totalRows,
+                      )} of ${tableData.totalRows}`
+                    : '0 rows'}
+                </span>
+                <ButtonGroup aria-label="Pagination">
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
+                    variant="outline"
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 0 || isLoadingData}
                   >
                     <ChevronLeftIcon className="size-4" />
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
+                    variant="outline"
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page >= totalPages - 1 || isLoadingData}
                   >
                     <ChevronRightIcon className="size-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleRefresh}
-                    disabled={isLoadingData}
-                  >
+                  <Button variant="outline" onClick={handleRefresh} disabled={isLoadingData}>
                     <RefreshCwIcon className="size-4" />
                   </Button>
-                </div>
+                </ButtonGroup>
               </div>
             </div>
 
