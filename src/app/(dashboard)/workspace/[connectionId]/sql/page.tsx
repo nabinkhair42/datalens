@@ -1,7 +1,7 @@
 'use client';
 
 import { useHotkey } from '@tanstack/react-hotkeys';
-import { ClockIcon, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
+import { ClockIcon, Loader2, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 import { Label } from '@/components/ui/label';
 import { useConnection } from '@/hooks/use-connections';
 import {
@@ -33,11 +34,7 @@ const SQLEditor = dynamic(
   () => import('@/components/editor/sql-editor').then((mod) => mod.SQLEditor),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center">
-        <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    ),
+    loading: () => <Loader2 className="mx-auto my-20 animate-spin text-muted-foreground" />,
   },
 );
 
@@ -351,7 +348,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Editor Toolbar */}
         <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-between">
             <span className="text-sm font-medium">Untitled</span>
             <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
               <DialogTrigger
@@ -408,19 +405,15 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              ⌘/Ctrl + Enter
-            </kbd>
+            <Kbd>⌘/Ctrl + Enter</Kbd>
             <span className="text-xs text-muted-foreground">Run</span>
-            <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              ⌘/Ctrl + S
-            </kbd>
+            <Kbd>⌘/Ctrl + S</Kbd>
             <span className="text-xs text-muted-foreground">Save</span>
           </div>
         </div>
 
         {/* SQL Editor */}
-        <div className="flex-1 border-b">
+        <div className="flex-1">
           <SQLEditor
             value={query}
             onChange={setQuery}

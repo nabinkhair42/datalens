@@ -260,9 +260,6 @@ export const SQLEditor = memo(function SQLEditor({
   }, [value]);
 
   return (
-    <div
-      ref={editorRef}
-      className={cn('h-full w-full overflow-hidden rounded-md border bg-background', className)}
-    />
+    <div ref={editorRef} className={cn('h-full w-full overflow-hidden bg-muted', className)} />
   );
 });
