@@ -4,7 +4,7 @@ import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCwIcon, TrashIcon } from 'lucide-react';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-
+import { DeleteRecordsDialog } from '@/components/dialogs/delete-records-dialog';
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
 import { AddRecordDialog, buildInsertQuery } from '@/components/tables/add-record-dialog';
 import { ColumnVisibility } from '@/components/tables/column-visibility';
@@ -16,7 +16,6 @@ import {
   TableFilters,
 } from '@/components/tables/table-filters';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
 import type { ColumnInfo } from '@/server/db-adapters/types';
@@ -502,13 +501,10 @@ export default function TablesPage({ params }: TablesPageProps) {
         )}
       </div>
 
-      <ConfirmDialog
+      <DeleteRecordsDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete Records"
-        description={`Are you sure you want to delete ${selectedRows.size} record${selectedRows.size !== 1 ? 's' : ''}? This action cannot be undone.`}
-        confirmLabel="Delete"
-        variant="destructive"
+        count={selectedRows.size}
         isLoading={isDeleting}
         onConfirm={handleDeleteConfirm}
       />
