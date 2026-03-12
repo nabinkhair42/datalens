@@ -35,7 +35,7 @@ type PaginationLinkProps = {
 
 function PaginationLink({ className, isActive, size = 'icon', ...props }: PaginationLinkProps) {
   return (
-    <Button variant={isActive ? 'outline' : 'ghost'} size={size} className={cn(className)} asChild>
+    <Button variant={isActive ? 'outline' : 'ghost'} size={size} className={cn(className)}>
       <a
         aria-current={isActive ? 'page' : undefined}
         data-slot="pagination-link"

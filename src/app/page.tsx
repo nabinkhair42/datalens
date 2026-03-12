@@ -43,7 +43,7 @@ export default function LandingPage() {
             <DatabaseIcon className="size-5 text-primary" />
             <span className="font-semibold">DataLens</span>
           </div>
-          <Button variant="ghost" asChild>
+          <Button variant="ghost">
             <Link href="/login">Sign In</Link>
           </Button>
         </div>
@@ -63,13 +63,13 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild>
+            <Button size="lg">
               <Link href="/login" className="flex items-center gap-2">
                 Get Started Free
-                <ArrowRightIcon className="size-4" />
+                <ArrowRightIcon />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline">
               <Link href="https://github.com/nabinkhair42/db-viewer" target="_blank">
                 View on GitHub
               </Link>

@@ -10,9 +10,9 @@ export const WorkspaceHeaderSkeleton = memo(function WorkspaceHeaderSkeleton(): 
         <Skeleton className="size-8" />
         {/* Connection selector */}
         <div className="flex items-center gap-2">
-          <Skeleton className="size-4" />
+          <Skeleton />
           <Skeleton className="h-5 w-32" />
-          <Skeleton className="size-4" />
+          <Skeleton />
         </div>
         {/* Database type badge */}
         <Skeleton className="h-5 w-20 rounded-full" />
@@ -124,7 +124,7 @@ const TablesContentSkeleton = memo(function TablesContentSkeleton(): React.React
           {/* Header row */}
           <div className="flex shrink-0 gap-px border-b bg-muted/50">
             <div className="w-10 border-r px-2 py-2">
-              <Skeleton className="size-4" />
+              <Skeleton />
             </div>
             {Array.from({ length: 6 }).map((_, index) => (
               <div
@@ -139,7 +139,7 @@ const TablesContentSkeleton = memo(function TablesContentSkeleton(): React.React
           {TABLE_ROW_WIDTHS.map((rowWidths, rowIndex) => (
             <div key={rowIndex} className="flex gap-px border-b">
               <div className="w-10 border-r px-2 py-2">
-                <Skeleton className="size-4" />
+                <Skeleton />
               </div>
               {rowWidths.map((width, colIndex) => (
                 <div
@@ -173,8 +173,8 @@ const SQLEditorContentSkeleton = memo(function SQLEditorContentSkeleton(): React
           <div className="flex-1 p-2">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="flex items-center gap-1.5 rounded-md px-2 py-1">
-                <Skeleton className="size-4" />
-                <Skeleton className="size-4" />
+                <Skeleton />
+                <Skeleton />
                 <Skeleton className="h-4 w-20" />
               </div>
             ))}

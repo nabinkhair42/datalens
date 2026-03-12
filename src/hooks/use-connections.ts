@@ -35,7 +35,7 @@ export function useConnection(id: string) {
         queryKey: QUERY_KEYS.CONNECTIONS,
       });
       for (const [, data] of listsData) {
-        const match = data?.data.find((conn) => conn.id === id);
+        const match = data?.data?.find((conn) => conn.id === id);
         if (match) {
           return match;
         }
@@ -55,7 +55,7 @@ export function useCreateConnection() {
       queryClient.setQueriesData<PaginatedConnections>(
         { queryKey: QUERY_KEYS.CONNECTIONS },
         (old) => {
-          if (!old) {
+          if (!old?.data || !old.pagination) {
             return old;
           }
           return {
@@ -86,7 +86,7 @@ export function useUpdateConnection() {
       queryClient.setQueriesData<PaginatedConnections>(
         { queryKey: QUERY_KEYS.CONNECTIONS },
         (old) => {
-          if (!old) {
+          if (!old?.data) {
             return old;
           }
           return {
@@ -112,7 +112,7 @@ export function useDeleteConnection() {
       queryClient.setQueriesData<PaginatedConnections>(
         { queryKey: QUERY_KEYS.CONNECTIONS },
         (old) => {
-          if (!old) {
+          if (!old?.data || !old.pagination) {
             return old;
           }
           return {

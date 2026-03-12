@@ -356,8 +356,8 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
             <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
               <DialogTrigger
                 render={
-                  <Button variant="outline" size="sm" disabled={!query.trim()}>
-                    <SaveIcon className="size-4" />
+                  <Button variant="outline" disabled={!query.trim()}>
+                    <SaveIcon />
                     Save
                   </Button>
                 }
@@ -433,12 +433,8 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         {/* Run Button Bar */}
         <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-4 py-2">
           <span className="text-sm text-muted-foreground">Ready to connect</span>
-          <Button
-            size="sm"
-            onClick={handleExecute}
-            disabled={executeQuery.isPending || !query.trim()}
-          >
-            <PlayIcon className="size-4" />
+          <Button onClick={handleExecute} disabled={executeQuery.isPending || !query.trim()}>
+            <PlayIcon />
             {executeQuery.isPending ? 'Running...' : 'Run'}
           </Button>
         </div>

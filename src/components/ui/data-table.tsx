@@ -188,7 +188,7 @@ export function DataTable<TData, TValue>({
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <ChevronLeftIcon className="size-4" />
+                  <ChevronLeftIcon />
                 </Button>
                 <Button
                   variant="outline"
@@ -196,7 +196,7 @@ export function DataTable<TData, TValue>({
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  <ChevronRightIcon className="size-4" />
+                  <ChevronRightIcon />
                 </Button>
               </ButtonGroup>
             </div>

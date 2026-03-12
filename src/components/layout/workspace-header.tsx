@@ -94,9 +94,9 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
         <div className="flex items-center gap-3">
           <Skeleton className="size-8" />
           <div className="flex items-center gap-2">
-            <Skeleton className="size-4" />
+            <Skeleton />
             <Skeleton className="h-5 w-28" />
-            <Skeleton className="size-4" />
+            <Skeleton />
           </div>
           <Skeleton className="h-5 w-20 rounded-full" />
         </div>
@@ -114,9 +114,9 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
   if (!connection) {
     return (
       <header className="flex h-12 shrink-0 items-center gap-4 border-b bg-background px-4">
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost">
           <Link href="/workspace">
-            <ChevronLeftIcon className="size-4" />
+            <ChevronLeftIcon />
             Back
           </Link>
         </Button>
@@ -132,9 +132,9 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
     <header className="flex h-12 shrink-0 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-3">
         {/* Back to workspace */}
-        <Button variant="ghost" size="icon-sm" asChild>
+        <Button variant="ghost" size="icon-sm">
           <Link href="/workspace">
-            <ChevronLeftIcon className="size-4" />
+            <ChevronLeftIcon />
           </Link>
         </Button>
 
@@ -145,7 +145,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
               'flex items-center justify-between hover:bg-accent px-2 rounded gap-2 font-medium'
             }
           >
-            <DatabaseIcon className="size-4" />
+            <DatabaseIcon />
             {connection.name}
             <ChevronDownIcon className="size-4 opacity-50" />
           </DropdownMenuTrigger>
@@ -156,7 +156,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
                   href={`/workspace/${conn.id}/tables`}
                   className={cn('flex w-full items-center gap-2')}
                 >
-                  <DatabaseIcon className="size-4" />
+                  <DatabaseIcon />
                   <span className="flex-1 truncate">{conn.name}</span>
                   <Badge variant="secondary" className="text-xs">
                     {DATABASE_TYPE_LABELS[conn.type as keyof typeof DATABASE_TYPE_LABELS] ??
@@ -183,7 +183,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
               onClick={() => navigateTo(item.href)}
               onMouseEnter={isSqlTab ? handleSqlTabHover : undefined}
             >
-              <item.icon className="size-4" />
+              <item.icon />
               {item.label}
             </Button>
           );

@@ -18,7 +18,7 @@ export function ThemeToggle(): React.ReactElement | null {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon-sm" disabled>
-        <SunIcon className="size-4" />
+        <SunIcon />
       </Button>
     );
   }
@@ -30,7 +30,7 @@ export function ThemeToggle(): React.ReactElement | null {
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      {theme === 'dark' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </Button>
   );
 }

@@ -32,7 +32,11 @@ export type FilterOperator =
   | 'is_null'
   | 'is_not_null';
 
-const OPERATORS: { value: FilterOperator; label: string; needsValue: boolean }[] = [
+const OPERATORS: {
+  value: FilterOperator;
+  label: string;
+  needsValue: boolean;
+}[] = [
   { value: 'equals', label: 'equals', needsValue: true },
   { value: 'not_equals', label: 'not equals', needsValue: true },
   { value: 'contains', label: 'contains', needsValue: true },
@@ -129,8 +133,8 @@ export const TableFilters = memo(function TableFilters({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger
         render={
-          <Button variant="outline" size="sm">
-            <FilterIcon className="size-4" />
+          <Button variant="outline">
+            <FilterIcon />
             Filters
             {filters.length > 0 && (
               <span className="ml-1 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
@@ -140,14 +144,13 @@ export const TableFilters = memo(function TableFilters({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[420px] p-0">
+      <PopoverContent align="start" className="w-105 p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h4 className="text-sm font-medium">Filters</h4>
           {filters.length > 0 && (
             <Button
               variant="ghost"
-              size="sm"
               className="h-6 px-2 text-xs text-muted-foreground"
               onClick={handleClearAll}
             >
@@ -180,7 +183,7 @@ export const TableFilters = memo(function TableFilters({
                   value && setNewFilter((prev) => ({ ...prev, column: value }))
                 }
               >
-                <SelectTrigger size="sm">
+                <SelectTrigger>
                   <SelectValue placeholder="Column" />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,10 +198,13 @@ export const TableFilters = memo(function TableFilters({
               <Select
                 value={newFilter.operator}
                 onValueChange={(value) =>
-                  setNewFilter((prev) => ({ ...prev, operator: value as FilterOperator }))
+                  setNewFilter((prev) => ({
+                    ...prev,
+                    operator: value as FilterOperator,
+                  }))
                 }
               >
-                <SelectTrigger size="sm">
+                <SelectTrigger>
                   <SelectValue placeholder="Operator" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,8 +237,8 @@ export const TableFilters = memo(function TableFilters({
                 </div>
               )}
 
-              <Button size="sm" onClick={handleAddFilter} className="shrink-0">
-                <PlusIcon className="size-4" />
+              <Button onClick={handleAddFilter} className="shrink-0">
+                <PlusIcon />
                 Add
               </Button>
             </div>

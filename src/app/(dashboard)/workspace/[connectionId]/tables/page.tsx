@@ -463,24 +463,24 @@ export default function TablesPage({ params }: TablesPageProps) {
                   onClick={handleAddRow}
                   disabled={isLoadingData || !!pendingRow}
                 >
-                  <PlusIcon className="size-4" />
+                  <PlusIcon />
                   Add record
                 </Button>
                 {pendingRow && (
                   <>
                     <Button onClick={handleSaveRow} disabled={isInserting}>
-                      <CheckIcon className="size-4" />
+                      <CheckIcon />
                       {isInserting ? 'Saving...' : 'Save changes'}
                     </Button>
                     <Button variant="outline" onClick={handleDiscardRow} disabled={isInserting}>
-                      <XIcon className="size-4" />
+                      <XIcon />
                       Discard changes
                     </Button>
                   </>
                 )}
                 {selectedRows.size > 0 && (
                   <Button variant="destructive" onClick={handleDeletePrompt} disabled={isDeleting}>
-                    <TrashIcon className="size-4" />
+                    <TrashIcon />
                     Delete {selectedRows.size} record
                     {selectedRows.size > 1 ? 's' : ''}
                   </Button>
@@ -509,17 +509,17 @@ export default function TablesPage({ params }: TablesPageProps) {
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 0 || isLoadingData}
                   >
-                    <ChevronLeftIcon className="size-4" />
+                    <ChevronLeftIcon />
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page >= totalPages - 1 || isLoadingData}
                   >
-                    <ChevronRightIcon className="size-4" />
+                    <ChevronRightIcon />
                   </Button>
                   <Button variant="outline" onClick={handleRefresh} disabled={isLoadingData}>
-                    <RefreshCwIcon className="size-4" />
+                    <RefreshCwIcon />
                   </Button>
                 </ButtonGroup>
               </div>

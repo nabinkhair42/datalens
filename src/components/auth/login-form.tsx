@@ -93,7 +93,7 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
                   </>
                 ) : (
                   <>
-                    <GitHubIcon className="size-4" />
+                    <GitHubIcon />
                     Continue with GitHub
                   </>
                 )}
@@ -121,7 +121,7 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
                   </>
                 ) : (
                   <>
-                    <GoogleIcon className="size-4" />
+                    <GoogleIcon />
                     Continue with Google
                   </>
                 )}

@@ -68,8 +68,8 @@ export const AddRecordDialog = memo(function AddRecordDialog({
     <Dialog open={isOpen} onOpenChange={handleOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" disabled={disabled || columns.length === 0}>
-            <PlusIcon className="size-4" />
+          <Button variant="outline" disabled={disabled || columns.length === 0}>
+            <PlusIcon />
             Add record
           </Button>
         }

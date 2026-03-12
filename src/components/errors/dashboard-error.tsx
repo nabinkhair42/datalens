@@ -37,12 +37,12 @@ export default function DashboardError({ error, reset }: ErrorProps) {
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Button onClick={reset} size="lg" className="gap-2">
-            <RefreshCwIcon className="size-4" />
+            <RefreshCwIcon />
             Try again
           </Button>
-          <Button variant="outline" size="lg" asChild className="gap-2">
+          <Button variant="outline" size="lg" className="gap-2">
             <Link href="/">
-              <HomeIcon className="size-4" />
+              <HomeIcon />
               Go home
             </Link>
           </Button>

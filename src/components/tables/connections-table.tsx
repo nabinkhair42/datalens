@@ -104,7 +104,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger onClick={(e) => e.stopPropagation()} className={'cursor-pointer'}>
-              <MoreVerticalIcon className="size-4" />
+              <MoreVerticalIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
@@ -114,7 +114,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                 }}
                 className="flex gap-2 items-center justify-start"
               >
-                <PanelLeftOpen className="size-4" />
+                <PanelLeftOpen />
                 Open
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -124,14 +124,14 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                 }}
                 className="flex gap-2 items-center justify-start"
               >
-                <PenLine className="size-4" />
+                <PenLine />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => handleDeleteClick(row.original.id, e)}
                 className="flex gap-2 items-center justify-start text-destructive"
               >
-                <TrashIcon className="size-4" />
+                <TrashIcon />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -165,13 +165,13 @@ export const ConnectionsTable = memo(function ConnectionsTable({
           description: 'Create your first database connection to get started',
           action: onCreateNew ? (
             <Button onClick={onCreateNew}>
-              <PlusIcon className="size-4" />
+              <PlusIcon />
               New Connection
             </Button>
           ) : (
-            <Button asChild>
+            <Button>
               <Link href="/connections/new">
-                <PlusIcon className="size-4" />
+                <PlusIcon />
                 New Connection
               </Link>
             </Button>

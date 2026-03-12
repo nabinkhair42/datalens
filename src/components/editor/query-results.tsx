@@ -66,7 +66,6 @@ export const QueryResults = memo(function QueryResults({
         return (
           <Button
             variant="ghost"
-            size="sm"
             className="-ml-3 h-8 data-[state=open]:bg-accent"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
@@ -161,7 +160,7 @@ export const QueryResults = memo(function QueryResults({
         </div>
         <div className="flex items-center gap-1">
           {onCopy && (
-            <Button variant="ghost" size="sm" onClick={handleCopy}>
+            <Button variant="ghost" onClick={handleCopy}>
               {copied ? (
                 <>
                   <CheckIcon className="size-4 text-green-500" />
@@ -169,21 +168,21 @@ export const QueryResults = memo(function QueryResults({
                 </>
               ) : (
                 <>
-                  <CopyIcon className="size-4" />
+                  <CopyIcon />
                   Copy
                 </>
               )}
             </Button>
           )}
           {onExportCSV && (
-            <Button variant="ghost" size="sm" onClick={onExportCSV}>
-              <DownloadIcon className="size-4" />
+            <Button variant="ghost" onClick={onExportCSV}>
+              <DownloadIcon />
               CSV
             </Button>
           )}
           {onExportJSON && (
-            <Button variant="ghost" size="sm" onClick={onExportJSON}>
-              <DownloadIcon className="size-4" />
+            <Button variant="ghost" onClick={onExportJSON}>
+              <DownloadIcon />
               JSON
             </Button>
           )}

@@ -77,19 +77,19 @@ export const ExportMenu = memo(function ExportMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" disabled={disabled || !hasData}>
-            <DownloadIcon className="size-4" />
+          <Button variant="outline" disabled={disabled || !hasData}>
+            <DownloadIcon />
             Export
           </Button>
         }
       />
       <DropdownMenuContent align="end" className={'w-40'}>
         <DropdownMenuItem className="gap-2" onSelect={exportCSV}>
-          <FileSpreadsheetIcon className="size-4" />
+          <FileSpreadsheetIcon />
           Export as CSV
         </DropdownMenuItem>
         <DropdownMenuItem className="gap-2" onSelect={exportJSON}>
-          <FileJsonIcon className="size-4" />
+          <FileJsonIcon />
           Export as JSON
         </DropdownMenuItem>
       </DropdownMenuContent>

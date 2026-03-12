@@ -108,7 +108,7 @@ export const SchemaExplorer = memo(function SchemaExplorer({
         <DatabaseIcon className="size-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">No tables found</p>
         {onRefresh && (
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
+          <Button variant="outline" onClick={onRefresh} disabled={isRefreshing}>
             <RefreshCwIcon className={cn('size-4', isRefreshing && 'animate-spin')} />
             Refresh
           </Button>
@@ -163,7 +163,7 @@ export const SchemaExplorer = memo(function SchemaExplorer({
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
             <SearchIcon className="size-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">No matches found</p>
-            <Button variant="link" size="sm" onClick={handleClearFilter}>
+            <Button variant="link" onClick={handleClearFilter}>
               Clear filter
             </Button>
           </div>

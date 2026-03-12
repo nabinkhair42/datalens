@@ -35,7 +35,7 @@ export default function RootError({ error, reset }: ErrorProps) {
         )}
 
         <Button onClick={reset} size="lg" className="gap-2">
-          <RefreshCwIcon className="size-4" />
+          <RefreshCwIcon />
           Try again
         </Button>
       </div>

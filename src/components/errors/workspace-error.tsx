@@ -37,12 +37,12 @@ export default function WorkspaceError({ error, reset }: ErrorProps) {
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Button onClick={reset} size="lg" className="gap-2">
-            <RefreshCwIcon className="size-4" />
+            <RefreshCwIcon />
             Try again
           </Button>
-          <Button variant="outline" size="lg" asChild className="gap-2">
+          <Button variant="outline" size="lg" className="gap-2">
             <Link href="/workspace">
-              <DatabaseIcon className="size-4" />
+              <DatabaseIcon />
               All connections
             </Link>
           </Button>
