@@ -10,7 +10,7 @@ import { QueryResults } from '@/components/editor/query-results';
 import { WorkspaceSidebar } from '@/components/layout/workspace-sidebar';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Kbd } from '@/components/ui/kbd';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useConnection } from '@/hooks/use-connections';
 import {
   useCreateSavedQuery,
@@ -217,10 +217,10 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
       {/* Sidebar: Mode Switcher + Saved/History */}
       <WorkspaceSidebar connectionId={connectionId}>
         {/* Sub-tabs: Saved / History */}
-        <div className="shrink-0 border-b p-2">
+        <div className="shrink-0 border-b px-2 py-2">
           <ButtonGroup className="w-full">
             <Button
-              variant={activeTab === 'saved' ? 'default' : 'ghost'}
+              variant={activeTab === 'saved' ? 'secondary' : 'ghost'}
               size="sm"
               className="flex-1"
               onClick={() => setActiveTab('saved')}
@@ -229,7 +229,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
               Saved
             </Button>
             <Button
-              variant={activeTab === 'history' ? 'default' : 'ghost'}
+              variant={activeTab === 'history' ? 'secondary' : 'ghost'}
               size="sm"
               className="flex-1"
               onClick={() => setActiveTab('history')}
@@ -241,7 +241,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-2">
+        <ScrollArea className="flex-1 p-2">
           {activeTab === 'saved' ? (
             <div className="space-y-0.5">
               {savedQueries && savedQueries.length > 0 ? (
@@ -312,7 +312,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
               )}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </WorkspaceSidebar>
 
       {/* Main Editor Area */}
@@ -324,6 +324,7 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
               variant="outline"
               disabled={!query.trim()}
               onClick={() => setSaveDialogOpen(true)}
+              hotKeys="Mod+S"
             >
               <SaveIcon />
               Save
@@ -335,13 +336,6 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
               onSave={handleSaveQuery}
               isSaving={createSavedQuery.isPending}
             />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Kbd>⌘/Ctrl + Enter</Kbd>
-            <span className="text-xs text-muted-foreground">Run</span>
-            <Kbd>⌘/Ctrl + S</Kbd>
-            <span className="text-xs text-muted-foreground">Save</span>
           </div>
         </div>
 

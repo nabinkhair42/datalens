@@ -1,24 +1,28 @@
 'use client';
 
-import { ChevronLeftIcon } from 'lucide-react';
+import { ChevronLeftIcon, PanelLeftIcon } from 'lucide-react';
 import Link from 'next/link';
 import { memo, useCallback } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { UserControl } from '@/components/shared/user-control';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DATABASE_TYPE_LABELS } from '@/config/constants';
 import { useLogout } from '@/hooks/use-auth';
 import { useConnection } from '@/hooks/use-connections';
 
 interface WorkspaceHeaderProps {
   connectionId: string;
+  onToggleSidebar?: () => void;
 }
 
 export const WorkspaceHeader = memo(function WorkspaceHeader({
   connectionId,
+  onToggleSidebar,
 }: WorkspaceHeaderProps) {
   const { data: connection, isLoading } = useConnection(connectionId);
   const { session } = useAuth();
@@ -60,28 +64,46 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
     DATABASE_TYPE_LABELS[connection.type as keyof typeof DATABASE_TYPE_LABELS] ?? connection.type;
 
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between border-b bg-background px-3">
-      <div className="flex items-center gap-1.5">
-        <Link href="/workspace">
-          <Button variant="ghost" size="icon-sm" title="Back to connections">
-            <ChevronLeftIcon />
-          </Button>
-        </Link>
-        <span className="text-sm font-medium">{connection.name}</span>
-        <span className="text-xs text-muted-foreground">&middot;</span>
-        <span className="text-xs text-muted-foreground">{dbLabel}</span>
-      </div>
+    <TooltipProvider>
+      <header className="flex h-11 shrink-0 items-center justify-between border-b bg-background px-3">
+        <div className="flex items-center gap-1.5">
+          {/* Mobile sidebar toggle */}
+          {onToggleSidebar && (
+            <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={onToggleSidebar}>
+              <PanelLeftIcon />
+            </Button>
+          )}
 
-      <div className="flex items-center gap-1">
-        <ThemeToggle />
-        {session?.user && (
-          <UserControl
-            user={session.user}
-            onLogout={handleLogout}
-            isLoggingOut={logoutMutation.isPending}
-          />
-        )}
-      </div>
-    </header>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link href="/workspace">
+                  <Button variant="ghost" size="icon-sm">
+                    <ChevronLeftIcon />
+                  </Button>
+                </Link>
+              }
+            />
+            <TooltipContent side="bottom">Back to connections</TooltipContent>
+          </Tooltip>
+
+          <span className="text-sm font-medium">{connection.name}</span>
+          <Badge variant="secondary" className="hidden sm:inline-flex">
+            {dbLabel}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          {session?.user && (
+            <UserControl
+              user={session.user}
+              onLogout={handleLogout}
+              isLoggingOut={logoutMutation.isPending}
+            />
+          )}
+        </div>
+      </header>
+    </TooltipProvider>
   );
 });

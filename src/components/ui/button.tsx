@@ -85,7 +85,7 @@ function Button({
     )
     .replace(/Shift/g, '\u21E7')
     .replace(/Alt/g, '\u2325')
-    .replace(/\+/g, '');
+    .replace(/\+/g, ' + ');
 
   const { children, ...restProps } = props as ButtonPrimitive.Props & {
     children?: React.ReactNode;

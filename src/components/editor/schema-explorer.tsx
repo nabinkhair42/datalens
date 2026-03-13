@@ -120,7 +120,7 @@ export const SchemaExplorer = memo(function SchemaExplorer({
   return (
     <div className="flex h-full flex-col">
       {/* Search + Refresh */}
-      <div className="shrink-0 p-2">
+      <div className="shrink-0 border-b p-2">
         <div className="relative flex items-center gap-1">
           <div className="relative flex-1">
             <SearchIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -170,22 +170,15 @@ export const SchemaExplorer = memo(function SchemaExplorer({
               const isSelected =
                 selectedTable?.schema === table.schema && selectedTable?.table === table.name;
               return (
-                <div
+                <button
                   key={`${table.schema}.${table.name}`}
-                  role="button"
-                  tabIndex={0}
+                  type="button"
                   className={cn(
                     'group flex w-full items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
                     'cursor-pointer hover:bg-accent',
                     isSelected && 'bg-accent',
                   )}
                   onClick={() => onTableSelect?.(table.schema, table.name)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onTableSelect?.(table.schema, table.name);
-                    }
-                  }}
                 >
                   <TableIcon className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">
@@ -205,7 +198,7 @@ export const SchemaExplorer = memo(function SchemaExplorer({
                       <TooltipContent side="right">Drop table</TooltipContent>
                     </Tooltip>
                   )}
-                </div>
+                </button>
               );
             })}
           </TooltipProvider>
