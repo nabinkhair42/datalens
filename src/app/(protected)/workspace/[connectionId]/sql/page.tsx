@@ -7,6 +7,7 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 
 import { SaveQueryDialog } from '@/components/dialogs';
 import { QueryResults } from '@/components/editor/query-results';
+import { WorkspaceSidebar } from '@/components/layout/workspace-sidebar';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Kbd } from '@/components/ui/kbd';
@@ -213,23 +214,25 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
 
   return (
     <div className="flex h-full">
-      {/* Left Sidebar - Saved & History */}
-      <aside className="flex w-64 shrink-0 flex-col border-r">
-        {/* Tabs */}
-        <div className="flex border-b w-full items-center justify-center">
-          <ButtonGroup>
+      {/* Sidebar: Mode Switcher + Saved/History */}
+      <WorkspaceSidebar connectionId={connectionId}>
+        {/* Sub-tabs: Saved / History */}
+        <div className="shrink-0 border-b p-2">
+          <ButtonGroup className="w-full">
             <Button
               variant={activeTab === 'saved' ? 'default' : 'ghost'}
-              className={'flex items-center justify-center gap-1'}
+              size="sm"
+              className="flex-1"
               onClick={() => setActiveTab('saved')}
             >
               <StarIcon className="size-3" />
               Saved
             </Button>
             <Button
-              onClick={() => setActiveTab('history')}
-              className={'flex items-center justify-center gap-1'}
               variant={activeTab === 'history' ? 'default' : 'ghost'}
+              size="sm"
+              className="flex-1"
+              onClick={() => setActiveTab('history')}
             >
               <ClockIcon className="size-3" />
               History
@@ -240,78 +243,77 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         {/* Content */}
         <div className="flex-1 overflow-auto p-2">
           {activeTab === 'saved' ? (
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {savedQueries && savedQueries.length > 0 ? (
                 savedQueries.map((item) => (
                   <div
                     key={item.id}
-                    className="group relative w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-muted"
+                    className="group relative w-full rounded-md p-2 text-left transition-colors hover:bg-muted"
                   >
                     <button
                       type="button"
                       className="w-full text-left"
                       onClick={() => handleLoadSavedQuery(item.query)}
                     >
-                      <p className="truncate font-medium text-sm">{item.name}</p>
-                      <p className="truncate font-mono text-xs text-muted-foreground">
+                      <p className="truncate text-xs font-medium">{item.name}</p>
+                      <p className="truncate font-mono text-[11px] text-muted-foreground">
                         {item.query}
                       </p>
                       {item.description && (
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                           {item.description}
                         </p>
                       )}
                     </button>
                     <button
                       type="button"
-                      className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
                       onClick={(e) => handleDeleteSavedQuery(item.id, e)}
                       disabled={deleteSavedQuery.isPending}
                     >
-                      <Trash2Icon className="size-4 text-muted-foreground hover:text-destructive" />
+                      <Trash2Icon className="size-3.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <StarIcon className="mb-2 size-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No saved queries yet</p>
-                  <p className="text-xs text-muted-foreground">Save queries for quick access</p>
+                  <StarIcon className="mb-2 size-6 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">No saved queries yet</p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {history && history.length > 0 ? (
                 history.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="w-full rounded-md p-2 text-left text-sm transition-colors hover:bg-muted"
+                    className="w-full rounded-md p-1.5 text-left transition-colors hover:bg-muted"
                     onClick={() => handleHistoryClick(item.query)}
                   >
-                    <p className="truncate font-mono text-xs">{item.query}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="truncate font-mono text-[11px]">{item.query}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {item.success ? (
                         <span className="text-green-600">{item.rowCount} rows</span>
                       ) : (
                         <span className="text-destructive">Failed</span>
                       )}
-                      {' • '}
+                      {' · '}
                       {item.executionTime}ms
                     </p>
                   </button>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <ClockIcon className="mb-2 size-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Your history is empty</p>
+                  <ClockIcon className="mb-2 size-6 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Your history is empty</p>
                 </div>
               )}
             </div>
           )}
         </div>
-      </aside>
+      </WorkspaceSidebar>
 
       {/* Main Editor Area */}
       <div className="flex flex-1 flex-col overflow-hidden">

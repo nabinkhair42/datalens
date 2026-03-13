@@ -27,11 +27,18 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  async (error: AxiosError) => {
+  async (error: AxiosError<{ error?: string }>) => {
     // Don't hard-redirect on 401 — let AuthProvider handle it.
     // A full window.location.href reload destroys all client state (React Query cache,
     // form state, editor content). Instead, just reject so React Query's retry/error
     // handling and the auth provider's session check coordinate the redirect.
+
+    // Extract the actual error message from the API response body
+    // so callers get meaningful messages instead of "Request failed with status code XXX"
+    const serverMessage = error.response?.data?.error;
+    if (serverMessage) {
+      error.message = serverMessage;
+    }
 
     return Promise.reject(error);
   },

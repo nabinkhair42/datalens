@@ -17,9 +17,8 @@ export const POST = withAuth(async (req: NextRequest, { userId }) => {
     const result = await queryServerService.execute(parsed.data, userId);
     return createApiResponse(result);
   } catch (error) {
-    return createErrorResponse(
-      error instanceof Error ? error.message : 'Query execution failed',
-      500,
-    );
+    const message = error instanceof Error ? error.message : 'Query execution failed';
+    const isBlocked = message.startsWith('Query blocked:');
+    return createErrorResponse(message, isBlocked ? 400 : 500);
   }
 });

@@ -14,6 +14,7 @@ import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DeleteRecordsDialog, DropTableDialog } from '@/components/dialogs';
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
+import { WorkspaceSidebar } from '@/components/layout/workspace-sidebar';
 import {
   buildInsertQuery,
   buildWhereClause,
@@ -319,7 +320,7 @@ export default function TablesPage({ params }: TablesPageProps) {
         toast.success('Cell updated successfully');
         handleRefresh();
       } catch (error) {
-        toast.error('Failed to update cell');
+        toast.error(error instanceof Error ? error.message : 'Failed to update cell');
         throw error;
       }
     },
@@ -380,7 +381,7 @@ export default function TablesPage({ params }: TablesPageProps) {
       setSelectedRows(new Set());
       handleRefresh();
     } catch (error) {
-      toast.error('Failed to delete records');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete records');
       console.error('Delete error:', error);
     } finally {
       setIsDeleting(false);
@@ -467,8 +468,8 @@ export default function TablesPage({ params }: TablesPageProps) {
 
   return (
     <div className="flex h-full">
-      {/* Schema Sidebar */}
-      <aside className="w-64 shrink-0 border-r">
+      {/* Sidebar: Mode Switcher + Schema Explorer */}
+      <WorkspaceSidebar connectionId={connectionId}>
         <SchemaExplorer
           schemas={schemas ?? []}
           selectedTable={selectedTable}
@@ -478,7 +479,7 @@ export default function TablesPage({ params }: TablesPageProps) {
           onTableSelect={handleTableSelect}
           onTableDrop={handleTableDrop}
         />
-      </aside>
+      </WorkspaceSidebar>
 
       {/* Table Data View */}
       <div className="flex flex-1 flex-col overflow-hidden">
