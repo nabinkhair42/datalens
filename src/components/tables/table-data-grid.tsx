@@ -71,10 +71,10 @@ const PendingNewRow = memo(function PendingNewRow({
   );
 
   return (
-    <tr className="border-b bg-green-50 dark:bg-green-950/30">
+    <tr className="border-b bg-primary/10">
       {/* Empty checkbox cell with a new-row indicator */}
       <td className="border-r px-2 py-2 text-center">
-        <span className="text-xs font-medium text-green-600">NEW</span>
+        <span className="text-xs font-medium">NEW</span>
       </td>
       {displayColumns.map((col) => {
         const colInfo = columnInfoMap.get(col);

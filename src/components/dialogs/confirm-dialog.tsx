@@ -66,7 +66,7 @@ export const ConfirmDialog = memo(function ConfirmDialog({
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading ? 'Processing...' : confirmLabel}
+            {loading ? 'Processing' : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

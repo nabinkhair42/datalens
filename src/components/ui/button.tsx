@@ -1,8 +1,10 @@
 'use client';
 
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
+import { type RegisterableHotkey, useHotkey } from '@tanstack/react-hotkeys';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -42,18 +44,62 @@ const buttonVariants = cva(
   },
 );
 
+interface ButtonProps extends ButtonPrimitive.Props, VariantProps<typeof buttonVariants> {
+  hotKeys?: string;
+}
+
 function Button({
   className,
   variant = 'default',
   size = 'default',
+  hotKeys,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  useHotkey(
+    (hotKeys ?? 'Unidentified') as RegisterableHotkey,
+    (e) => {
+      e.preventDefault();
+      if (!props.disabled) {
+        (props as { onClick?: (e: unknown) => void }).onClick?.(e);
+      }
+    },
+    { enabled: !!hotKeys },
+  );
+
+  if (!hotKeys) {
+    return (
+      <ButtonPrimitive
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    );
+  }
+
+  const hotkeyLabel = hotKeys
+    .replace(
+      /Mod/g,
+      typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+        ? '\u2318'
+        : 'Ctrl',
+    )
+    .replace(/Shift/g, '\u21E7')
+    .replace(/Alt/g, '\u2325')
+    .replace(/\+/g, '');
+
+  const { children, ...restProps } = props as ButtonPrimitive.Props & {
+    children?: React.ReactNode;
+  };
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+      {...restProps}
+    >
+      {children}
+      <Kbd className="ml-1">{hotkeyLabel}</Kbd>
+    </ButtonPrimitive>
   );
 }
 

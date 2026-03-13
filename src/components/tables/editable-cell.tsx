@@ -338,7 +338,7 @@ function CellDisplayValue({ value }: { value: unknown }) {
     return <span className="text-muted-foreground italic">NULL</span>;
   }
   if (typeof value === 'boolean') {
-    return <span className={value ? 'text-green-600' : 'text-red-500'}>{String(value)}</span>;
+    return <span>{String(value)}</span>;
   }
   if (typeof value === 'object') {
     return <span className="text-xs">{JSON.stringify(value)}</span>;
@@ -372,7 +372,7 @@ function SaveCancelButtons({
         {isSaving ? (
           <Loader2Icon className="size-3 animate-spin" />
         ) : (
-          <CheckIcon className="size-3 text-green-600" />
+          <CheckIcon className="size-3" />
         )}
       </Button>
       <Button
@@ -385,7 +385,7 @@ function SaveCancelButtons({
         className="size-6 shrink-0"
         disabled={isSaving}
       >
-        <XIcon className="size-3 text-destructive" />
+        <XIcon className="size-3" />
       </Button>
     </>
   );

@@ -89,7 +89,7 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
                 {isLoading === 'github' ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Connecting...
+                    Connecting
                   </>
                 ) : (
                   <>
@@ -117,7 +117,7 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
                 {isLoading === 'google' ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Connecting...
+                    Connecting
                   </>
                 ) : (
                   <>

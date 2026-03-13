@@ -60,13 +60,18 @@ export default function WorkspacePage() {
       setEditingConnection(connection);
       setFormOpen(true);
 
-      // Fetch full connection (with password) via React Query cache.
-      // If cached from a previous edit, this returns instantly. Otherwise fetches in background.
-      const fullConnection = await queryClient.fetchQuery({
-        queryKey: QUERY_KEYS.CONNECTION(connection.id),
-        queryFn: () => connectionService.get(connection.id),
-        staleTime: 2 * 60 * 1000, // 2 min — don't refetch if recently loaded
-      });
+      // Fetch full connection (with password) from the server.
+      // If we have a cached version WITH a password (from a previous edit), use it.
+      // Otherwise always fetch fresh — the hover-seeded cache has no password.
+      const cached = queryClient.getQueryData<Connection>(QUERY_KEYS.CONNECTION(connection.id));
+      const fullConnection =
+        cached?.password !== undefined
+          ? cached
+          : await queryClient.fetchQuery({
+              queryKey: QUERY_KEYS.CONNECTION(connection.id),
+              queryFn: () => connectionService.get(connection.id),
+              staleTime: 0, // always refetch to ensure password is included
+            });
 
       // Update form with full data (password field fills in)
       setEditingConnection(fullConnection);

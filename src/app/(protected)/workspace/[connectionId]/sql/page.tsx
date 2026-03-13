@@ -5,21 +5,11 @@ import { ClockIcon, Loader2, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lu
 import dynamic from 'next/dynamic';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 
+import { SaveQueryDialog } from '@/components/dialogs';
 import { QueryResults } from '@/components/editor/query-results';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Kbd } from '@/components/ui/kbd';
-import { Label } from '@/components/ui/label';
 import { useConnection } from '@/hooks/use-connections';
 import {
   useCreateSavedQuery,
@@ -57,9 +47,6 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'saved' | 'history'>('history');
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [queryName, setQueryName] = useState('');
-  const [queryDescription, setQueryDescription] = useState('');
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [results, setResults] = useState<{
     data: Record<string, unknown>[];
     columns: string[];
@@ -180,30 +167,18 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     setQuery(historyQuery);
   }, []);
 
-  const handleSaveQuery = useCallback(async () => {
-    if (!queryName.trim() || !query.trim()) {
-      setSaveError('Query name is required');
-      return;
-    }
-
-    setSaveError(null);
-
-    try {
+  const handleSaveQuery = useCallback(
+    async (name: string, description: string | undefined) => {
       await createSavedQuery.mutateAsync({
-        name: queryName.trim(),
-        description: queryDescription.trim() || undefined,
+        name,
+        description,
         query: query.trim(),
         connectionId,
       });
-
-      // Reset form and close dialog
-      setQueryName('');
-      setQueryDescription('');
       setSaveDialogOpen(false);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to save query');
-    }
-  }, [queryName, queryDescription, query, connectionId, createSavedQuery]);
+    },
+    [query, connectionId, createSavedQuery],
+  );
 
   const handleLoadSavedQuery = useCallback((savedQuery: string) => {
     setQuery(savedQuery);
@@ -241,31 +216,25 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
       {/* Left Sidebar - Saved & History */}
       <aside className="flex w-64 shrink-0 flex-col border-r">
         {/* Tabs */}
-        <div className="flex border-b">
-          <Button
-            className={`flex items-center justify-center ${
-              activeTab === 'saved'
-                ? 'text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            variant={'ghost'}
-            onClick={() => setActiveTab('saved')}
-          >
-            <StarIcon className="mr-1 inline-block size-4" />
-            Saved
-          </Button>
-          <Button
-            className={`flex items-center justify-center ${
-              activeTab === 'history'
-                ? 'border-b-2 border text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={() => setActiveTab('history')}
-            variant={'ghost'}
-          >
-            <ClockIcon className="mr-1 inline-block size-4" />
-            History
-          </Button>
+        <div className="flex border-b w-full items-center justify-center">
+          <ButtonGroup>
+            <Button
+              variant={activeTab === 'saved' ? 'default' : 'ghost'}
+              className={'flex items-center justify-center gap-1'}
+              onClick={() => setActiveTab('saved')}
+            >
+              <StarIcon className="size-3" />
+              Saved
+            </Button>
+            <Button
+              onClick={() => setActiveTab('history')}
+              className={'flex items-center justify-center gap-1'}
+              variant={activeTab === 'history' ? 'default' : 'ghost'}
+            >
+              <ClockIcon className="size-3" />
+              History
+            </Button>
+          </ButtonGroup>
         </div>
 
         {/* Content */}
@@ -349,59 +318,21 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         {/* Editor Toolbar */}
         <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2 justify-between">
-            <span className="text-sm font-medium">Untitled</span>
-            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-              <DialogTrigger
-                render={
-                  <Button variant="outline" disabled={!query.trim()}>
-                    <SaveIcon />
-                    Save
-                  </Button>
-                }
-              />
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Save Query</DialogTitle>
-                  <DialogDescription>Save this query for quick access later.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="query-name">Name</Label>
-                    <Input
-                      id="query-name"
-                      placeholder="My query"
-                      value={queryName}
-                      onChange={(e) => setQueryName(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="query-description">Description (optional)</Label>
-                    <Input
-                      id="query-description"
-                      placeholder="What does this query do?"
-                      value={queryDescription}
-                      onChange={(e) => setQueryDescription(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Query Preview</Label>
-                    <div className="max-h-24 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">
-                      {query}
-                    </div>
-                  </div>
-                  {saveError && <p className="text-sm text-destructive">{saveError}</p>}
-                </div>
-                <DialogFooter>
-                  <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-                  <Button
-                    onClick={handleSaveQuery}
-                    disabled={createSavedQuery.isPending || !queryName.trim()}
-                  >
-                    {createSavedQuery.isPending ? 'Saving...' : 'Save Query'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button
+              variant="outline"
+              disabled={!query.trim()}
+              onClick={() => setSaveDialogOpen(true)}
+            >
+              <SaveIcon />
+              Save
+            </Button>
+            <SaveQueryDialog
+              open={saveDialogOpen}
+              onOpenChange={setSaveDialogOpen}
+              query={query}
+              onSave={handleSaveQuery}
+              isSaving={createSavedQuery.isPending}
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -424,9 +355,13 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
         </div>
 
         {/* Run Button Bar */}
-        <div className="flex shrink-0 items-center gap-2 border-b bg-muted/30 px-4 py-2">
-          <span className="text-sm text-muted-foreground">Ready to connect</span>
-          <Button onClick={handleExecute} disabled={executeQuery.isPending || !query.trim()}>
+        <div className="flex border-b bg-muted/30 px-4 py-2">
+          <Button
+            onClick={handleExecute}
+            variant={'outline'}
+            disabled={executeQuery.isPending || !query.trim()}
+            hotKeys="Mod + Enter"
+          >
             <PlayIcon />
             {executeQuery.isPending ? 'Running...' : 'Run'}
           </Button>

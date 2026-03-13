@@ -4,7 +4,7 @@ export default function AuthLoader() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Left Panel skeleton */}
-      <div className="relative hidden flex-col justify-between bg-primary p-10 lg:flex">
+      <div className="relative hidden flex-col justify-between bg-primary/10 p-10 lg:flex">
         <div className="flex items-center gap-2">
           <Skeleton className="size-6 bg-primary-foreground/20" />
           <Skeleton className="h-6 w-24 bg-primary-foreground/20" />
