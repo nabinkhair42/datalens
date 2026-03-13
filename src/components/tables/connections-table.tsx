@@ -63,11 +63,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
       {
         accessorKey: 'name',
         header: 'Name',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{row.original.name}</span>
-          </div>
-        ),
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
       },
       {
         accessorKey: 'type',
@@ -81,7 +77,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
       },
       {
         id: 'username',
-        accessorFn: (row) => `${row.username}`,
+        accessorFn: (row) => row.username,
         header: 'Username',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.username}</span>,
       },
@@ -103,7 +99,7 @@ export const ConnectionsTable = memo(function ConnectionsTable({
         size: 50,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()} className={'cursor-pointer'}>
+            <DropdownMenuTrigger onClick={(e) => e.stopPropagation()} className="cursor-pointer">
               <MoreVerticalIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -112,7 +108,6 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                   e.stopPropagation();
                   onConnect(row.original);
                 }}
-                className="flex gap-2 items-center justify-start"
               >
                 <PanelLeftOpen />
                 Open
@@ -122,14 +117,13 @@ export const ConnectionsTable = memo(function ConnectionsTable({
                   e.stopPropagation();
                   onEdit(row.original);
                 }}
-                className="flex gap-2 items-center justify-start"
               >
                 <PenLine />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
+                variant="destructive"
                 onClick={(e) => handleDeleteClick(row.original.id, e)}
-                className="flex gap-2 items-center justify-start text-destructive"
               >
                 <TrashIcon />
                 Delete

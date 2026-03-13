@@ -134,7 +134,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
 
         {/* Connection Selector Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 hover:bg-muted">
+          <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1 hover:bg-muted rounded">
             {connection.name}
             <ChevronDownIcon className="size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
@@ -146,7 +146,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({
                   className={cn('flex w-full items-center gap-2')}
                 >
                   <span className="flex-1 truncate">{conn.name}</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary">
                     {DATABASE_TYPE_LABELS[conn.type as keyof typeof DATABASE_TYPE_LABELS] ??
                       conn.type}
                   </Badge>

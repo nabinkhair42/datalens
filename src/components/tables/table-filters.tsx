@@ -1,7 +1,7 @@
 'use client';
 
 import { FilterIcon, PlusIcon, XIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { ColumnInfo } from '@/server/db-adapters/types';
 
 export interface TableFilter {
   id: string;
@@ -48,8 +49,80 @@ const OPERATORS: {
   { value: 'is_not_null', label: 'is not null', needsValue: false },
 ];
 
+const BOOLEAN_VALUES = ['true', 'false'];
+
+type ColumnValueType = 'enum' | 'boolean' | 'text';
+
+function getColumnValueType(columnInfo: ColumnInfo | undefined): ColumnValueType {
+  if (columnInfo?.enumValues && columnInfo.enumValues.length > 0) {
+    return 'enum';
+  }
+  const type = columnInfo?.type?.toLowerCase() ?? '';
+  if (type === 'boolean' || type === 'bool') {
+    return 'boolean';
+  }
+  return 'text';
+}
+
+function getSelectOptions(
+  valueType: ColumnValueType,
+  columnInfo: ColumnInfo | undefined,
+): string[] {
+  if (valueType === 'enum' && columnInfo?.enumValues) {
+    return columnInfo.enumValues;
+  }
+  if (valueType === 'boolean') {
+    return BOOLEAN_VALUES;
+  }
+  return [];
+}
+
+interface FilterValueInputProps {
+  valueType: ColumnValueType;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+}
+
+function FilterValueInput({
+  valueType,
+  options,
+  value,
+  onChange,
+  onKeyDown,
+}: FilterValueInputProps) {
+  if (valueType === 'enum' || valueType === 'boolean') {
+    return (
+      <Select value={value || undefined} onValueChange={(v) => v && onChange(v)}>
+        <SelectTrigger className="flex-1">
+          <SelectValue placeholder={valueType === 'boolean' ? 'Select value' : 'Select option'} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  return (
+    <Input
+      placeholder="Enter value..."
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex-1"
+      onKeyDown={onKeyDown}
+    />
+  );
+}
+
 interface TableFiltersProps {
   columns: string[];
+  columnInfo?: ColumnInfo[];
   filters: TableFilter[];
   onFiltersChange: (filters: TableFilter[]) => void;
 }
@@ -81,6 +154,7 @@ function ActiveFilter({
 
 export const TableFilters = memo(function TableFilters({
   columns,
+  columnInfo,
   filters,
   onFiltersChange,
 }: TableFiltersProps) {
@@ -90,6 +164,32 @@ export const TableFilters = memo(function TableFilters({
     operator: 'equals',
     value: '',
   });
+
+  const columnInfoMap = useMemo(() => {
+    if (!columnInfo) {
+      return new Map<string, ColumnInfo>();
+    }
+    return new Map(columnInfo.map((c) => [c.name, c]));
+  }, [columnInfo]);
+
+  const selectedColumnInfo = columnInfoMap.get(newFilter.column || '');
+  const valueType = getColumnValueType(selectedColumnInfo);
+  const selectOptions = getSelectOptions(valueType, selectedColumnInfo);
+  const currentOperator = OPERATORS.find((op) => op.value === newFilter.operator);
+
+  const handleColumnChange = useCallback(
+    (column: string) => {
+      const info = columnInfoMap.get(column);
+      const colValueType = getColumnValueType(info);
+      // Reset value when switching columns since the input type may change
+      setNewFilter((prev) => ({
+        ...prev,
+        column,
+        value: colValueType !== 'text' ? '' : prev?.value || '',
+      }));
+    },
+    [columnInfoMap],
+  );
 
   const handleAddFilter = useCallback(() => {
     if (!newFilter.column || !newFilter.operator) {
@@ -126,8 +226,6 @@ export const TableFilters = memo(function TableFilters({
   const handleClearAll = useCallback(() => {
     onFiltersChange([]);
   }, [onFiltersChange]);
-
-  const currentOperator = OPERATORS.find((op) => op.value === newFilter.operator);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -179,9 +277,7 @@ export const TableFilters = memo(function TableFilters({
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={newFilter.column}
-                onValueChange={(value) =>
-                  value && setNewFilter((prev) => ({ ...prev, column: value }))
-                }
+                onValueChange={(value) => value && handleColumnChange(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Column" />
@@ -220,11 +316,11 @@ export const TableFilters = memo(function TableFilters({
             {/* Value + Add button row */}
             <div className="flex gap-2">
               {currentOperator?.needsValue ? (
-                <Input
-                  placeholder="Enter value..."
+                <FilterValueInput
+                  valueType={valueType}
+                  options={selectOptions}
                   value={newFilter.value || ''}
-                  onChange={(e) => setNewFilter((prev) => ({ ...prev, value: e.target.value }))}
-                  className="flex-1"
+                  onChange={(value) => setNewFilter((prev) => ({ ...prev, value }))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleAddFilter();
@@ -284,4 +380,31 @@ export function buildWhereClause(filters: TableFilter[]): string {
   });
 
   return `WHERE ${conditions.filter(Boolean).join(' AND ')}`;
+}
+
+// Helper to build INSERT query from pending row data
+export function buildInsertQuery(
+  schema: string,
+  table: string,
+  row: Record<string, string>,
+): string {
+  const entries = Object.entries(row).filter(([, value]) => value !== '');
+  if (entries.length === 0) {
+    return `INSERT INTO "${schema}"."${table}" DEFAULT VALUES`;
+  }
+
+  const columns = entries.map(([col]) => `"${col}"`).join(', ');
+  const values = entries
+    .map(([, value]) => {
+      if (value.toLowerCase() === 'null') {
+        return 'NULL';
+      }
+      if (value.toUpperCase() === 'DEFAULT') {
+        return 'DEFAULT';
+      }
+      return `'${value.replace(/'/g, "''")}'`;
+    })
+    .join(', ');
+
+  return `INSERT INTO "${schema}"."${table}" (${columns}) VALUES (${values})`;
 }

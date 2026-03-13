@@ -1,6 +1,6 @@
 'use client';
 
-import { DatabaseIcon, RefreshCwIcon, SearchIcon, TableIcon, XIcon } from 'lucide-react';
+import { DatabaseIcon, RefreshCwIcon, SearchIcon, TableIcon, TrashIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 import { SchemaExplorerSkeleton } from '@/components/loaders';
@@ -36,6 +36,7 @@ interface SchemaExplorerProps {
   isRefreshing?: boolean;
   onRefresh?: () => void;
   onTableSelect?: (schema: string, table: string) => void;
+  onTableDrop?: (schema: string, table: string) => void;
   onColumnSelect?: (schema: string, table: string, column: string) => void;
 }
 
@@ -68,12 +69,10 @@ export const SchemaExplorer = memo(function SchemaExplorer({
   isRefreshing,
   onRefresh,
   onTableSelect,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onColumnSelect: _onColumnSelect,
+  onTableDrop,
 }: SchemaExplorerProps) {
   const [filter, setFilter] = useState('');
 
-  // Flatten all tables from all schemas for simple list view
   const allTables = useMemo(() => {
     return schemas.flatMap((schema) =>
       schema.tables.map((table) => ({
@@ -85,7 +84,6 @@ export const SchemaExplorer = memo(function SchemaExplorer({
     );
   }, [schemas]);
 
-  // Filter tables based on search query
   const filteredTables = useMemo(() => {
     if (!filter.trim()) {
       return allTables;
@@ -172,21 +170,41 @@ export const SchemaExplorer = memo(function SchemaExplorer({
             const isSelected =
               selectedTable?.schema === table.schema && selectedTable?.table === table.name;
             return (
-              <button
+              <div
                 key={`${table.schema}.${table.name}`}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className={cn(
-                  'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors',
-                  'hover:bg-accent',
+                  'group flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors',
+                  'hover:bg-accent cursor-pointer',
                   isSelected && 'bg-accent',
                 )}
                 onClick={() => onTableSelect?.(table.schema, table.name)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onTableSelect?.(table.schema, table.name);
+                  }
+                }}
               >
                 <TableIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="truncate">
+                <span className="flex-1 truncate">
                   <HighlightText text={table.name} highlight={filter} />
                 </span>
-              </button>
+                {onTableDrop && (
+                  <button
+                    type="button"
+                    className="hidden shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive group-hover:block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTableDrop(table.schema, table.name);
+                    }}
+                    title="Drop table"
+                  >
+                    <TrashIcon className="size-3.5" />
+                  </button>
+                )}
+              </div>
             );
           })
         )}

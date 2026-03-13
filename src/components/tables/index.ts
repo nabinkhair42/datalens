@@ -1,4 +1,3 @@
-export * from './add-record-dialog';
 export * from './column-visibility';
 export * from './connections-table';
 export * from './editable-cell';

@@ -18,6 +18,14 @@ import { useState } from 'react';
 import { DataTableSkeleton } from '@/components/loaders';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 export interface DataTableProps<TData, TValue> {
@@ -83,7 +91,6 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // Loading state
   if (isLoading) {
     return (
       <DataTableSkeleton
@@ -125,18 +132,17 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      {/* Table */}
       {filteredRowCount > 0 ? (
         <>
           <div className="overflow-hidden rounded-lg border">
-            <table className="w-full text-sm">
-              <thead>
+            <Table>
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id} className="border-b bg-muted/50">
+                  <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50">
                     {headerGroup.headers.map((header) => (
-                      <th
+                      <TableHead
                         key={header.id}
-                        className="px-4 py-3 text-left font-medium text-muted-foreground"
+                        className="border-r-0 text-muted-foreground"
                         style={{
                           width:
                             header.column.getSize() !== 150 ? header.column.getSize() : undefined,
@@ -145,17 +151,16 @@ export function DataTable<TData, TValue>({
                         {header.isPlaceholder
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </thead>
-              <tbody>
+              </TableHeader>
+              <TableBody>
                 {table.getRowModel().rows.map((row, index) => (
-                  <tr
+                  <TableRow
                     key={row.id}
                     className={cn(
-                      'border-b transition-colors hover:bg-muted/50',
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
                       onRowClick && 'cursor-pointer',
                     )}
@@ -163,14 +168,14 @@ export function DataTable<TData, TValue>({
                     onMouseEnter={() => onRowHover?.(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3">
+                      <TableCell key={cell.id} className="border-r-0 px-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
@@ -203,7 +208,6 @@ export function DataTable<TData, TValue>({
           )}
         </>
       ) : (
-        // Empty state
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           {emptyState?.icon && <div className="mb-4 text-muted-foreground">{emptyState.icon}</div>}
           <h3 className="mb-2 font-medium">{emptyState?.title ?? 'No data'}</h3>

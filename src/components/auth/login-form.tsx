@@ -1,10 +1,13 @@
 'use client';
 
-import { Database, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { memo, useCallback, useState } from 'react';
 
+import { AuthDivider } from '@/components/auth/auth-divider';
+import { DecorIcon } from '@/components/auth/decor-icon';
+import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon, GoogleIcon } from '@/icons';
 import { signInWithGitHub, signInWithGoogle } from '@/lib/auth-client';
@@ -39,38 +42,31 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
   }, [callbackUrl]);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left Panel - Branding */}
-      <div className="relative hidden flex-col justify-between bg-muted p-10 lg:flex">
+    <div className="flex flex-col bg-background">
+      {/* Mobile header */}
+      <div className="flex items-center justify-between p-6 lg:hidden">
         <div className="flex items-center gap-2 text-lg font-medium">
-          <Database className="size-6" />
+          <DataLensLogo className="size-5" />
           <span>DataLens</span>
         </div>
-
-        <blockquote className="space-y-2">
-          <p className="text-lg opacity-80">
-            &ldquo;DataLens has transformed how our team explores and visualizes database schemas.
-            The intuitive interface saves us hours of work every week.&rdquo;
-          </p>
-          <footer className="text-sm opacity-60">— Alex Chen, Engineering Lead</footer>
-        </blockquote>
       </div>
 
-      {/* Right Panel - Auth Form */}
-      <div className="flex flex-col bg-background">
-        {/* Mobile header */}
-        <div className="flex items-center justify-between p-6 lg:hidden">
-          <div className="flex items-center gap-2 text-lg font-medium">
-            <Database className="size-5" />
-            <span>DataLens</span>
-          </div>
-        </div>
+      <div className="flex flex-1 items-center justify-center px-6 md:px-8">
+        <div className="relative flex w-full max-w-sm flex-col p-8 md:p-10 dark:bg-[radial-gradient(50%_80%_at_20%_0%,--theme(--color-foreground/.1),transparent)]">
+          {/* Border lines */}
+          <div className="absolute -inset-y-8 -left-px w-px bg-border" />
+          <div className="absolute -inset-y-8 -right-px w-px bg-border" />
+          <div className="absolute -inset-x-8 -top-px h-px bg-border" />
+          <div className="absolute -inset-x-8 -bottom-px h-px bg-border" />
+          <DecorIcon position="top-left" />
+          <DecorIcon position="bottom-right" />
 
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="w-full max-w-sm space-y-6">
-            <div className="space-y-2 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">Sign in to DataLens</h1>
-              <p className="text-sm text-muted-foreground">Connect your account to get started</p>
+          <div className="w-full max-w-sm space-y-10">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+              <p className="text-base text-muted-foreground">
+                Sign in to your DataLens account to continue
+              </p>
             </div>
 
             {error && (
@@ -79,62 +75,47 @@ export const LoginForm = memo(function LoginForm(): React.ReactElement {
               </div>
             )}
 
-            <div className="space-y-3">
+            <div className="space-y-5">
               <Button
                 variant="outline"
-                className="w-full h-10"
+                size="lg"
+                className="h-11 w-full text-sm"
                 onClick={handleGitHubSignIn}
                 disabled={isLoading !== null}
               >
                 {isLoading === 'github' ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Connecting
-                  </>
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <>
-                    <GitHubIcon />
-                    Continue with GitHub
-                  </>
+                  <GitHubIcon data-icon="inline-start" />
                 )}
+                Continue with GitHub
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                </div>
-              </div>
+              <AuthDivider>or</AuthDivider>
 
               <Button
                 variant="outline"
-                className="w-full h-10"
+                size="lg"
+                className="h-11 w-full text-sm"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading !== null}
               >
                 {isLoading === 'google' ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Connecting
-                  </>
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <>
-                    <GoogleIcon />
-                    Continue with Google
-                  </>
+                  <GoogleIcon data-icon="inline-start" />
                 )}
+                Continue with Google
               </Button>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               By clicking continue, you agree to our{' '}
-              <Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
+              <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+              <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
                 Privacy Policy
               </Link>
               .

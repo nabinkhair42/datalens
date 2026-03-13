@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { DeleteRecordsDialog } from '@/components/dialogs';
+import { DeleteRecordsDialog, DropTableDialog } from '@/components/dialogs';
 import { SchemaExplorer } from '@/components/editor/schema-explorer';
 import {
   buildInsertQuery,
@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
+import { cn } from '@/lib/utils';
 import type { ColumnInfo } from '@/server/db-adapters/types';
 
 interface TablesPageProps {
@@ -77,6 +78,8 @@ export default function TablesPage({ params }: TablesPageProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingRow, setPendingRow] = useState<Record<string, string> | null>(null);
   const [isInserting, setIsInserting] = useState(false);
+  const [dropTarget, setDropTarget] = useState<{ schema: string; table: string } | null>(null);
+  const [isDropping, setIsDropping] = useState(false);
 
   // rerender-use-ref-transient-values: Stabilize loadTableData by keeping mutation
   // and visibleColumns in refs. Without this, loadTableData is recreated every render
@@ -384,6 +387,39 @@ export default function TablesPage({ params }: TablesPageProps) {
     }
   }, [selectedTable, selectedRows, tableData.rows, deleteRows, handleRefresh]);
 
+  const handleTableDrop = useCallback((schema: string, table: string) => {
+    setDropTarget({ schema, table });
+  }, []);
+
+  const handleDropConfirm = useCallback(async () => {
+    if (!dropTarget) {
+      return;
+    }
+    setIsDropping(true);
+    try {
+      await executeQueryRef.current.mutateAsync({
+        connectionId,
+        query: `DROP TABLE "${dropTarget.schema}"."${dropTarget.table}"`,
+        skipHistory: false,
+      });
+      toast.success(`Table "${dropTarget.table}" dropped successfully`);
+      // Clear selection if the dropped table was selected
+      if (
+        selectedTable?.schema === dropTarget.schema &&
+        selectedTable?.table === dropTarget.table
+      ) {
+        setSelectedTable(null);
+        setTableData({ rows: [], columns: [], columnInfo: [], totalRows: 0 });
+      }
+      refetchSchema();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to drop table');
+    } finally {
+      setIsDropping(false);
+      setDropTarget(null);
+    }
+  }, [dropTarget, connectionId, selectedTable, refetchSchema]);
+
   // Derive column info with additional metadata from schema
   const tableColumnInfo = useMemo(() => {
     if (!selectedTable || !schemas) {
@@ -440,6 +476,7 @@ export default function TablesPage({ params }: TablesPageProps) {
           isRefreshing={isFetchingSchema}
           onRefresh={() => refetchSchema()}
           onTableSelect={handleTableSelect}
+          onTableDrop={handleTableDrop}
         />
       </aside>
 
@@ -452,6 +489,7 @@ export default function TablesPage({ params }: TablesPageProps) {
               <div className="flex items-center gap-2">
                 <TableFilters
                   columns={tableData.columns}
+                  columnInfo={tableColumnInfo}
                   filters={filters}
                   onFiltersChange={handleFiltersChange}
                 />
@@ -497,7 +535,7 @@ export default function TablesPage({ params }: TablesPageProps) {
 
               {/* Pagination */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
+                <span className="min-w-28 text-right text-sm tabular-nums text-muted-foreground">
                   {tableData.totalRows > 0
                     ? `${pagination.page * pagination.pageSize + 1}-${Math.min(
                         (pagination.page + 1) * pagination.pageSize,
@@ -521,7 +559,7 @@ export default function TablesPage({ params }: TablesPageProps) {
                     <ChevronRightIcon />
                   </Button>
                   <Button variant="outline" onClick={handleRefresh} disabled={isLoadingData}>
-                    <RefreshCwIcon />
+                    <RefreshCwIcon className={cn(isLoadingData && 'animate-spin')} />
                   </Button>
                 </ButtonGroup>
               </div>
@@ -536,7 +574,9 @@ export default function TablesPage({ params }: TablesPageProps) {
                 visibleColumns={visibleColumns}
                 selectedRows={selectedRows}
                 sortConfig={sortConfig}
+                filters={filters}
                 onSortChange={handleSortChange}
+                onFiltersChange={handleFiltersChange}
                 onSelectionChange={setSelectedRows}
                 onCellEdit={handleCellEdit}
                 isLoading={isLoadingData}
@@ -553,6 +593,21 @@ export default function TablesPage({ params }: TablesPageProps) {
           </div>
         )}
       </div>
+
+      {dropTarget && (
+        <DropTableDialog
+          open={!!dropTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDropTarget(null);
+            }
+          }}
+          schema={dropTarget.schema}
+          table={dropTarget.table}
+          onConfirm={handleDropConfirm}
+          isLoading={isDropping}
+        />
+      )}
 
       <DeleteRecordsDialog
         open={deleteDialogOpen}

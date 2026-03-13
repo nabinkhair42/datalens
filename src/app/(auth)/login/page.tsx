@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 
-import { LoginForm } from '@/components/auth/login-form';
+import { LoginCore } from '@/components/auth/login-core';
 import AuthLoader from '@/components/loaders/auth-loader';
 
 export default function LoginPage(): React.ReactElement {
   return (
     <Suspense fallback={<AuthLoader />}>
-      <LoginForm />
+      <LoginCore />
     </Suspense>
   );
 }
