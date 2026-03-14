@@ -48,7 +48,13 @@ export interface CellEdit {
 
 // --- Sort icon helper ---
 
-function SortIcon({ column, sortConfig }: { column: string; sortConfig?: SortConfig | null }) {
+function SortIcon({
+  column,
+  sortConfig,
+}: {
+  column: string;
+  sortConfig?: SortConfig | null | undefined;
+}) {
   if (sortConfig?.column === column) {
     return sortConfig.direction === 'asc' ? (
       <ArrowUpIcon className="size-3.5" />
@@ -98,12 +104,12 @@ function ColumnHeaderCell({
 }: {
   column: string;
   colInfo: ColumnInfo | undefined;
-  sortConfig?: SortConfig | null;
+  sortConfig?: SortConfig | null | undefined;
   filters: TableFilter[];
   onSort: (column: string) => void;
   onFilterAdd: (column: string, value: string) => void;
   onFilterRemove: (column: string) => void;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }) {
   const filterOptions = getFilterOptions(colInfo);
   const activeFilter = filters.find((f) => f.column === column);
@@ -257,8 +263,8 @@ interface TableDataGridProps {
   columnInfo?: ColumnInfo[];
   visibleColumns?: Set<string>;
   selectedRows?: Set<number>;
-  sortConfig?: SortConfig | null;
-  filters?: TableFilter[];
+  sortConfig?: SortConfig | null | undefined;
+  filters?: TableFilter[] | undefined;
   onSortChange?: (sort: SortConfig | null) => void;
   onFiltersChange?: (filters: TableFilter[]) => void;
   onSelectionChange?: (selectedRows: Set<number>) => void;
