@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { memo, useCallback } from 'react';
-
-import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { UserControl } from '@/components/shared/user-control';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useLogout } from '@/hooks/use-auth';
+import { DataLensLogo } from '@/icons/datalens-logo';
 
 export const DashboardHeader = memo(function DashboardHeader() {
   const { session } = useAuth();

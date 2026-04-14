@@ -1,7 +1,7 @@
-import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
 import { Separator } from '@/components/ui/separator';
 import { MongoDB, PostgreSQL } from '@/icons';
+import { DataLensLogo } from '@/icons/datalens-logo';
 
 export function LoginBranding() {
   return (

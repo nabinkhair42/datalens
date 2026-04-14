@@ -6,9 +6,8 @@ import {
   ZapIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-
-import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { Button } from '@/components/ui/button';
+import { DataLensLogo } from '@/icons/datalens-logo';
 
 const FEATURES = [
   {

@@ -7,9 +7,9 @@ import { memo, useCallback, useState } from 'react';
 
 import { AuthDivider } from '@/components/auth/auth-divider';
 import { DecorIcon } from '@/components/auth/decor-icon';
-import { DataLensLogo } from '@/components/icons/datalens-logo';
 import { Button } from '@/components/ui/button';
 import { GitHubIcon, GoogleIcon } from '@/icons';
+import { DataLensLogo } from '@/icons/datalens-logo';
 import { signInWithGitHub, signInWithGoogle } from '@/lib/auth-client';
 
 export const LoginForm = memo(function LoginForm(): React.ReactElement {
