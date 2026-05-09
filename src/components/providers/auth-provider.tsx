@@ -1,7 +1,15 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, type ReactNode, useContext, useLayoutEffect, useMemo } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { type AuthSession, useSession } from '@/hooks/use-auth';
 
@@ -39,10 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
   const pathname = usePathname();
   const { data: session, isLoading } = useSession();
 
-  const isAuthenticated = !!session?.user;
+  // Better-auth's cookie cache resolves useSession() synchronously on the client,
+  // but on SSR it stays pending. That mismatch causes hydration errors in any page
+  // that branches on auth state. Force first render (server + initial client) to
+  // report loading so consumers render the same shell on both sides; flip to real
+  // values once hydrated.
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const isAuthenticated = isHydrated && !!session?.user;
+  const effectiveIsLoading = !isHydrated || isLoading;
 
   useLayoutEffect(() => {
-    if (isLoading) {
+    if (effectiveIsLoading) {
       return;
     }
 
@@ -59,15 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
       const callbackUrl = params.get('callbackUrl') || '/workspace';
       router.replace(callbackUrl);
     }
-  }, [isAuthenticated, isLoading, pathname, router]);
+  }, [isAuthenticated, effectiveIsLoading, pathname, router]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({
-      session,
-      isLoading,
+      session: isHydrated ? session : null,
+      isLoading: effectiveIsLoading,
       isAuthenticated,
     }),
-    [session, isLoading, isAuthenticated],
+    [session, isHydrated, effectiveIsLoading, isAuthenticated],
   );
 
   // Always render children — pages manage their own loading states.

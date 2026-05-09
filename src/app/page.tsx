@@ -1,10 +1,4 @@
-import {
-  ArrowRightIcon,
-  GitBranchIcon,
-  LayersIcon,
-  TerminalSquareIcon,
-  ZapIcon,
-} from 'lucide-react';
+import { ArrowRightIcon, GitBranchIcon, LayersIcon, TerminalSquareIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { DataLensLogo } from '@/icons/datalens-logo';
@@ -24,11 +18,6 @@ const FEATURES = [
     icon: GitBranchIcon,
     title: 'Multi-Database',
     description: 'PostgreSQL, MySQL, SQLite, and more coming soon',
-  },
-  {
-    icon: ZapIcon,
-    title: 'Fast & Modern',
-    description: 'Built with Next.js 16, React 19, and Turbopack',
   },
 ] as const;
 
@@ -77,12 +66,16 @@ export default function LandingPage() {
         </div>
 
         {/* Features */}
-        <div className="mt-20 grid w-full max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-20 grid w-full max-w-4xl sm:grid-cols-3 gap-6">
           {FEATURES.map((feature) => (
-            <div key={feature.title} className="rounded-lg border bg-card p-4">
-              <feature.icon className="mb-3 size-8 text-primary" />
-              <h3 className="mb-1 font-medium">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
+            <div key={feature.title} className="rounded-xl border bg-muted p-1">
+              <div className="flex h-full flex-col items-start rounded-lg bg-background p-6 space-y-4">
+                <div className="bg-muted p-2 h-8 w-8 aspect-square flex items-center justify-center rounded border">
+                  <feature.icon className="size-5 text-primary" />
+                </div>
+                <h3 className="mb-1 font-medium">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </div>
             </div>
           ))}
         </div>

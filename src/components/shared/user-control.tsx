@@ -4,7 +4,7 @@ import { LogOutIcon, SettingsIcon, UserIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
 import { SignoutDialog } from '@/components/dialogs';
-import { Avatar, AvatarFallback, AvatarImage, getInitials } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,6 +22,15 @@ interface UserControlProps {
   onLogout: () => void;
   isLoggingOut?: boolean;
 }
+
+const getInitials = (name: string | null, email: string): string => {
+  if (name) {
+    const names = name.split(' ');
+    const initials = names.map((n) => n[0]).join('');
+    return initials.toUpperCase();
+  }
+  return email.charAt(0).toUpperCase();
+};
 
 export const UserControl = memo(function UserControl({
   user,
@@ -41,7 +50,7 @@ export const UserControl = memo(function UserControl({
         <DropdownMenuTrigger
           render={
             <Button variant="ghost" className="relative size-9 rounded-full p-0">
-              <Avatar size="sm">
+              <Avatar size="default">
                 {user.image ? <AvatarImage src={user.image} alt={user.name ?? user.email} /> : null}
                 <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
               </Avatar>

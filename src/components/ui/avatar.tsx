@@ -90,24 +90,4 @@ function AvatarGroupCount({ className, ...props }: React.ComponentProps<'div'>) 
   );
 }
 
-// Helper to get initials from name/email
-function getInitials(name: string | null | undefined, email: string): string {
-  if (name) {
-    const parts = name.split(' ').filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
-    }
-    return (name[0] ?? '').toUpperCase();
-  }
-  return (email[0] ?? '').toUpperCase();
-}
-
-export {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
-  AvatarBadge,
-  getInitials,
-};
+export { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage };
