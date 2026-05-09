@@ -1,6 +1,7 @@
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
 
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -38,18 +39,72 @@ const buttonVariants = cva(
   },
 );
 
+const HOTKEY_SYMBOLS: Record<string, string> = {
+  mod: '⌘',
+  cmd: '⌘',
+  command: '⌘',
+  meta: '⌘',
+  ctrl: '⌃',
+  control: '⌃',
+  shift: '⇧',
+  alt: '⌥',
+  option: '⌥',
+  enter: '↵',
+  return: '↵',
+  escape: 'Esc',
+  esc: 'Esc',
+  backspace: '⌫',
+  delete: '⌦',
+  tab: '⇥',
+  space: '␣',
+  arrowup: '↑',
+  arrowdown: '↓',
+  arrowleft: '←',
+  arrowright: '→',
+  up: '↑',
+  down: '↓',
+  left: '←',
+  right: '→',
+};
+
+function formatHotkey(token: string): string {
+  const trimmed = token.trim();
+  return HOTKEY_SYMBOLS[trimmed.toLowerCase()] ?? trimmed.toUpperCase();
+}
+
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    hotKeys?: string;
+  };
+
 function Button({
   className,
   variant = 'default',
   size = 'default',
+  hotKeys,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const keys = hotKeys
+    ?.split('+')
+    .map((k) => k.trim())
+    .filter(Boolean);
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {children}
+      {keys && keys.length > 0 && (
+        <KbdGroup className="ml-1">
+          {keys.map((key, index) => (
+            <Kbd key={`${key}-${index}`}>{formatHotkey(key)}</Kbd>
+          ))}
+        </KbdGroup>
+      )}
+    </ButtonPrimitive>
   );
 }
 
