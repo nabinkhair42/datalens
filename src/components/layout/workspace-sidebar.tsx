@@ -6,15 +6,47 @@ import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback } from 'react';
 
 import { useSidebar } from '@/app/(protected)/workspace/[connectionId]/layout';
-import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { QUERY_KEYS } from '@/config/constants';
+import { cn } from '@/lib/utils';
 import queryService from '@/services/query.service';
 
 interface WorkspaceSidebarProps {
   connectionId: string;
   children: React.ReactNode;
+}
+
+interface ModeTabProps {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  onMouseEnter?: () => void;
+}
+
+function ModeTab({ active, icon, label, onClick, onMouseEnter }: ModeTabProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      data-active={active}
+      className={cn(
+        'group relative inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors',
+        active ? 'text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-0 -z-10 rounded-md bg-background shadow-sm ring-1 ring-border transition-opacity',
+          active ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+      <span className="[&_svg]:size-3.5">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
 }
 
 function SidebarContent({
@@ -47,27 +79,27 @@ function SidebarContent({
 
   return (
     <>
-      {/* Mode Switcher — height matches main toolbar (py-2 + h-8 button) */}
-      <div className="shrink-0 border-b px-2 py-2">
-        <ButtonGroup className="w-full">
-          <Button
-            variant={isTablesActive ? 'default' : 'ghost'}
-            className="flex-1"
+      {/* Mode Switcher — segmented control sitting in a muted track */}
+      <div className="shrink-0 border-b p-2">
+        <div
+          role="tablist"
+          aria-label="Workspace mode"
+          className="flex items-center gap-1 rounded-lg bg-muted/60 p-1"
+        >
+          <ModeTab
+            active={isTablesActive}
+            icon={<TableIcon />}
+            label="Tables"
             onClick={() => onNavigate(`/workspace/${connectionId}/tables`)}
-          >
-            <TableIcon />
-            Tables
-          </Button>
-          <Button
-            variant={isSqlActive ? 'default' : 'ghost'}
-            className="flex-1"
+          />
+          <ModeTab
+            active={isSqlActive}
+            icon={<TerminalSquareIcon />}
+            label="SQL"
             onClick={() => onNavigate(`/workspace/${connectionId}/sql`)}
             onMouseEnter={handleSqlHover}
-          >
-            <TerminalSquareIcon />
-            SQL
-          </Button>
-        </ButtonGroup>
+          />
+        </div>
       </div>
 
       {/* Mode-specific content */}
@@ -94,7 +126,7 @@ export const WorkspaceSidebar = memo(function WorkspaceSidebar({
   return (
     <>
       {/* Desktop: static sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar/40 md:flex">
         <SidebarContent connectionId={connectionId} onNavigate={handleNav}>
           {children}
         </SidebarContent>

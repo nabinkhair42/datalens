@@ -1,16 +1,26 @@
 'use client';
 
 import { useHotkey } from '@tanstack/react-hotkeys';
-import { ClockIcon, Loader2, PlayIcon, SaveIcon, StarIcon, Trash2Icon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  ClockIcon,
+  Loader2,
+  PlayIcon,
+  SaveIcon,
+  StarIcon,
+  Trash2Icon,
+  XCircleIcon,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 
 import { SaveQueryDialog } from '@/components/dialogs';
 import { QueryResults } from '@/components/editor/query-results';
 import { WorkspaceSidebar } from '@/components/layout/workspace-sidebar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { useConnection } from '@/hooks/use-connections';
 import {
   useCreateSavedQuery,
@@ -19,18 +29,83 @@ import {
   useQueryHistory,
   useSavedQueries,
 } from '@/hooks/use-queries';
+import { cn } from '@/lib/utils';
 
 // Dynamic import for SQL Editor to avoid SSR issues with CodeMirror
 const SQLEditor = dynamic(
   () => import('@/components/editor/sql-editor').then((mod) => mod.SQLEditor),
   {
     ssr: false,
-    loading: () => <Loader2 className="mx-auto my-20 animate-spin text-muted-foreground" />,
+    loading: () => (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    ),
   },
 );
 
 interface SQLEditorPageProps {
   params: Promise<{ connectionId: string }>;
+}
+
+interface SidebarTabProps {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  count?: number | undefined;
+  onClick: () => void;
+}
+
+function SidebarTab({ active, icon, label, count, onClick }: SidebarTabProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-active={active}
+      className={cn(
+        'group relative inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors',
+        active ? 'text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-0 -z-10 rounded-md bg-background shadow-sm ring-1 ring-border transition-opacity',
+          active ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+      <span className="[&_svg]:size-3.5">{icon}</span>
+      <span>{label}</span>
+      {count !== undefined && count > 0 && (
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-px font-mono text-[10px] tabular-nums',
+            active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+          )}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function formatRelativeTime(value: string | Date | undefined) {
+  if (!value) {
+    return '';
+  }
+  const date = typeof value === 'string' ? new Date(value) : value;
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) {
+    return `${seconds}s ago`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}m ago`;
+  }
+  if (seconds < 86400) {
+    return `${Math.floor(seconds / 3600)}h ago`;
+  }
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 export default function SQLEditorPage({ params }: SQLEditorPageProps) {
@@ -58,8 +133,6 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     columns: [],
   });
 
-  // rerender-use-ref-transient-values: Keep results in a ref so export/copy
-  // callbacks have stable references and don't cause QueryResults to re-render.
   const resultsRef = useRef(results);
   useEffect(() => {
     resultsRef.current = results;
@@ -198,7 +271,6 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
   );
 
   // --- Keyboard shortcuts ---
-  // Ctrl+S / Cmd+S: Open save query dialog
   useHotkey('Mod+S', (e) => {
     e.preventDefault();
     if (query.trim()) {
@@ -206,128 +278,91 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
     }
   });
 
-  // Ctrl+Enter / Cmd+Enter: Execute query (backup — CodeMirror handles this when focused)
   useHotkey('Mod+Enter', (e) => {
     e.preventDefault();
     handleExecute();
   });
 
+  const queryCharCount = query.length;
+  const hasQuery = query.trim().length > 0;
+
   return (
     <div className="flex h-full">
-      {/* Sidebar: Mode Switcher + Saved/History */}
       <WorkspaceSidebar connectionId={connectionId}>
-        {/* Sub-tabs: Saved / History */}
-        <div className="shrink-0 border-b px-2 py-2">
-          <ButtonGroup className="w-full">
-            <Button
-              variant={activeTab === 'saved' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="flex-1"
-              onClick={() => setActiveTab('saved')}
-            >
-              <StarIcon className="size-3" />
-              Saved
-            </Button>
-            <Button
-              variant={activeTab === 'history' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="flex-1"
+        <div className="shrink-0 px-2 py-2">
+          <div
+            role="tablist"
+            aria-label="Query source"
+            className="flex items-center gap-1 rounded-lg bg-muted/60 p-1"
+          >
+            <SidebarTab
+              active={activeTab === 'history'}
+              icon={<ClockIcon />}
+              label="History"
+              count={history?.length}
               onClick={() => setActiveTab('history')}
-            >
-              <ClockIcon className="size-3" />
-              History
-            </Button>
-          </ButtonGroup>
+            />
+            <SidebarTab
+              active={activeTab === 'saved'}
+              icon={<StarIcon />}
+              label="Saved"
+              count={savedQueries?.length}
+              onClick={() => setActiveTab('saved')}
+            />
+          </div>
         </div>
 
-        {/* Content */}
-        <ScrollArea className="flex-1 p-2">
+        <Separator />
+
+        <ScrollArea className="flex-1 p-1.5">
           {activeTab === 'saved' ? (
-            <div className="space-y-0.5">
-              {savedQueries && savedQueries.length > 0 ? (
-                savedQueries.map((item) => (
-                  <div
-                    key={item.id}
-                    className="group relative w-full rounded-md p-2 text-left transition-colors hover:bg-muted"
-                  >
-                    <button
-                      type="button"
-                      className="w-full text-left"
-                      onClick={() => handleLoadSavedQuery(item.query)}
-                    >
-                      <p className="truncate text-xs font-medium">{item.name}</p>
-                      <p className="truncate font-mono text-[11px] text-muted-foreground">
-                        {item.query}
-                      </p>
-                      {item.description && (
-                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                          {item.description}
-                        </p>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={(e) => handleDeleteSavedQuery(item.id, e)}
-                      disabled={deleteSavedQuery.isPending}
-                    >
-                      <Trash2Icon className="size-3.5 text-muted-foreground hover:text-destructive" />
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <StarIcon className="mb-2 size-6 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">No saved queries yet</p>
-                </div>
-              )}
-            </div>
+            <SavedQueriesList
+              items={savedQueries}
+              onLoad={handleLoadSavedQuery}
+              onDelete={handleDeleteSavedQuery}
+              isDeleting={deleteSavedQuery.isPending}
+            />
           ) : (
-            <div className="space-y-0.5">
-              {history && history.length > 0 ? (
-                history.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="w-full rounded-md p-1.5 text-left transition-colors hover:bg-muted"
-                    onClick={() => handleHistoryClick(item.query)}
-                  >
-                    <p className="truncate font-mono text-[11px]">{item.query}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {item.success ? (
-                        <span className="text-green-600">{item.rowCount} rows</span>
-                      ) : (
-                        <span className="text-destructive">Failed</span>
-                      )}
-                      {' · '}
-                      {item.executionTime}ms
-                    </p>
-                  </button>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <ClockIcon className="mb-2 size-6 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Your history is empty</p>
-                </div>
-              )}
-            </div>
+            <HistoryList items={history} onLoad={handleHistoryClick} />
           )}
         </ScrollArea>
       </WorkspaceSidebar>
 
-      {/* Main Editor Area */}
+      {/* Main editor area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Editor Toolbar */}
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-          <div className="flex items-center gap-2 justify-between">
+        {/* Top toolbar */}
+        <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <PlayIcon className="size-3.5" />
+            <span className="font-medium text-foreground">Query editor</span>
+            {hasQuery && (
+              <>
+                <Separator orientation="vertical" className="mx-1 h-3" />
+                <span className="font-mono tabular-nums">{queryCharCount} chars</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <Button
-              variant="outline"
-              disabled={!query.trim()}
+              variant="ghost"
+              size="sm"
+              disabled={!hasQuery}
               onClick={() => setSaveDialogOpen(true)}
               hotKeys="Mod+S"
             >
               <SaveIcon />
               Save
+            </Button>
+            <Separator orientation="vertical" className="mx-1 h-5" />
+            <Button
+              size="sm"
+              onClick={handleExecute}
+              disabled={executeQuery.isPending || !hasQuery}
+              hotKeys="Mod+Enter"
+            >
+              {executeQuery.isPending ? <Loader2 className="animate-spin" /> : <PlayIcon />}
+              {executeQuery.isPending ? 'Running…' : 'Run'}
             </Button>
             <SaveQueryDialog
               open={saveDialogOpen}
@@ -339,32 +374,19 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
           </div>
         </div>
 
-        {/* SQL Editor */}
-        <div className="flex-1">
+        {/* SQL editor */}
+        <div className="min-h-0 flex-1">
           <SQLEditor
             value={query}
             onChange={setQuery}
             onExecute={handleExecute}
             dialect={(connection?.type as 'postgresql' | 'mysql' | 'sqlite') ?? 'postgresql'}
-            placeholder="Write your SQL query here..."
+            placeholder="Write your SQL query here…"
           />
         </div>
 
-        {/* Run Button Bar */}
-        <div className="flex border-b bg-muted/30 px-4 py-2">
-          <Button
-            onClick={handleExecute}
-            variant={'outline'}
-            disabled={executeQuery.isPending || !query.trim()}
-            hotKeys="Mod + Enter"
-          >
-            <PlayIcon />
-            {executeQuery.isPending ? 'Running...' : 'Run'}
-          </Button>
-        </div>
-
-        {/* Results Panel */}
-        <div className="h-72 shrink-0">
+        {/* Results panel */}
+        <div className="h-72 shrink-0 border-t">
           <QueryResults
             data={results.data}
             columns={results.columns}
@@ -377,6 +399,136 @@ export default function SQLEditorPage({ params }: SQLEditorPageProps) {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+interface SavedQueryItem {
+  id: string;
+  name: string;
+  description?: string | null | undefined;
+  query: string;
+}
+
+interface SavedQueriesListProps {
+  items: SavedQueryItem[] | undefined;
+  onLoad: (query: string) => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+  isDeleting: boolean;
+}
+
+function SavedQueriesList({ items, onLoad, onDelete, isDeleting }: SavedQueriesListProps) {
+  if (!items || items.length === 0) {
+    return <SidebarEmptyState icon={<StarIcon />} message="No saved queries yet" />;
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="group relative rounded-md p-2 transition-colors hover:bg-accent/60"
+        >
+          <button
+            type="button"
+            className="block w-full text-left"
+            onClick={() => onLoad(item.query)}
+          >
+            <div className="flex items-center gap-1.5">
+              <StarIcon className="size-3 shrink-0 text-amber-500" />
+              <p className="min-w-0 flex-1 truncate text-xs font-medium">{item.name}</p>
+            </div>
+            <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground/80">
+              {item.query}
+            </p>
+            {item.description && (
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {item.description}
+              </p>
+            )}
+          </button>
+          <button
+            type="button"
+            className="absolute right-1.5 top-1.5 rounded p-1 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+            onClick={(e) => onDelete(item.id, e)}
+            disabled={isDeleting}
+            aria-label="Delete saved query"
+          >
+            <Trash2Icon className="size-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface HistoryItem {
+  id: string;
+  query: string;
+  success: boolean;
+  rowCount?: number | null | undefined;
+  executionTime?: number | null | undefined;
+  createdAt?: string | Date | undefined;
+}
+
+interface HistoryListProps {
+  items: HistoryItem[] | undefined;
+  onLoad: (query: string) => void;
+}
+
+function HistoryList({ items, onLoad }: HistoryListProps) {
+  if (!items || items.length === 0) {
+    return <SidebarEmptyState icon={<ClockIcon />} message="Your history is empty" />;
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className="group flex flex-col gap-1.5 rounded-md p-2 text-left transition-colors hover:bg-accent/60"
+          onClick={() => onLoad(item.query)}
+        >
+          <p className="line-clamp-2 font-mono text-[11px] leading-snug text-foreground/90">
+            {item.query}
+          </p>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            {item.success ? (
+              <Badge
+                variant="outline"
+                className="h-4 gap-1 border-emerald-500/30 px-1.5 text-[10px] text-emerald-600 dark:text-emerald-400"
+              >
+                <CheckCircle2Icon className="size-2.5" />
+                {item.rowCount ?? 0} {item.rowCount === 1 ? 'row' : 'rows'}
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="h-4 gap-1 px-1.5 text-[10px]">
+                <XCircleIcon className="size-2.5" />
+                Failed
+              </Badge>
+            )}
+            {item.executionTime !== undefined && item.executionTime !== null && (
+              <span className="tabular-nums">{item.executionTime}ms</span>
+            )}
+            {item.createdAt && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span>{formatRelativeTime(item.createdAt)}</span>
+              </>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SidebarEmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+      <div className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-4">
+        {icon}
+      </div>
+      <p className="text-xs text-muted-foreground">{message}</p>
     </div>
   );
 }

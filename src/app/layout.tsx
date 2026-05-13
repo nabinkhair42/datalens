@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { HotkeysProvider } from '@/components/providers/hotkeys-provider';
+import { MaintenanceProvider } from '@/components/providers/maintenance-provider';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import './globals.css';
@@ -48,12 +49,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={cn('font-sans', geist.variable)}>
       <body suppressHydrationWarning className={`${outfit.variable}`}>
         <ThemeProvider>
-          <QueryProvider>
-            <HotkeysProvider>
-              <AuthProvider>{children}</AuthProvider>
-            </HotkeysProvider>
-          </QueryProvider>
-          <Toaster position="bottom-right" richColors />
+          <MaintenanceProvider>
+            <QueryProvider>
+              <HotkeysProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </HotkeysProvider>
+            </QueryProvider>
+            <Toaster position="bottom-right" richColors />
+          </MaintenanceProvider>
         </ThemeProvider>
       </body>
     </html>

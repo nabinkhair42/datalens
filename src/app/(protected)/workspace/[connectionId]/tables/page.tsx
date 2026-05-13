@@ -1,15 +1,7 @@
 'use client';
 
 import { useHotkey } from '@tanstack/react-hotkeys';
-import {
-  CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PlusIcon,
-  RefreshCwIcon,
-  TrashIcon,
-  XIcon,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { use, useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DeleteRecordsDialog, DropTableDialog } from '@/components/dialogs';
@@ -19,18 +11,14 @@ import {
   buildInsertQuery,
   buildWhereClause,
   type CellEdit,
-  ColumnVisibility,
-  ExportMenu,
   type SortConfig,
   TableDataGrid,
   type TableFilter,
-  TableFilters,
+  TableToolbar,
 } from '@/components/tables';
-import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
+import { TablesEmptyState } from '@/components/workspace';
 import { useConnectionSchema } from '@/hooks/use-connections';
 import { useExecuteQuery } from '@/hooks/use-queries';
-import { cn } from '@/lib/utils';
 import type { ColumnInfo } from '@/server/db-adapters/types';
 
 interface TablesPageProps {
@@ -39,6 +27,7 @@ interface TablesPageProps {
 
 export default function TablesPage({ params }: TablesPageProps) {
   const { connectionId } = use(params);
+  const router = useRouter();
   const {
     data: schemas,
     isLoading: isLoadingSchema,
@@ -434,8 +423,6 @@ export default function TablesPage({ params }: TablesPageProps) {
     return tableInfo.columns;
   }, [selectedTable, schemas, tableData.columnInfo]);
 
-  const totalPages = Math.ceil(tableData.totalRows / pagination.pageSize);
-
   // --- Keyboard shortcuts ---
   // Ctrl+R / Cmd+R: Refresh table data
   useHotkey('Mod+R', (e) => {
@@ -485,86 +472,32 @@ export default function TablesPage({ params }: TablesPageProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         {selectedTable ? (
           <>
-            {/* Table Toolbar */}
-            <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-              <div className="flex items-center gap-2">
-                <TableFilters
-                  columns={tableData.columns}
-                  columnInfo={tableColumnInfo}
-                  filters={filters}
-                  onFiltersChange={handleFiltersChange}
-                />
-                <ColumnVisibility
-                  columns={tableData.columns}
-                  visibleColumns={visibleColumns}
-                  onVisibilityChange={setVisibleColumns}
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleAddRow}
-                  disabled={isLoadingData || !!pendingRow}
-                >
-                  <PlusIcon />
-                  Add record
-                </Button>
-                {pendingRow && (
-                  <>
-                    <Button onClick={handleSaveRow} disabled={isInserting}>
-                      <CheckIcon />
-                      {isInserting ? 'Saving...' : 'Save changes'}
-                    </Button>
-                    <Button variant="outline" onClick={handleDiscardRow} disabled={isInserting}>
-                      <XIcon />
-                      Discard changes
-                    </Button>
-                  </>
-                )}
-                {selectedRows.size > 0 && (
-                  <Button variant="destructive" onClick={handleDeletePrompt} disabled={isDeleting}>
-                    <TrashIcon />
-                    Delete {selectedRows.size} record
-                    {selectedRows.size > 1 ? 's' : ''}
-                  </Button>
-                )}
-                <ExportMenu
-                  data={tableData.rows}
-                  columns={tableData.columns}
-                  filename={`${selectedTable.schema}_${selectedTable.table}`}
-                  disabled={isLoadingData}
-                />
-              </div>
-
-              {/* Pagination */}
-              <div className="flex items-center gap-2">
-                <span className="min-w-28 text-right text-sm tabular-nums text-muted-foreground">
-                  {tableData.totalRows > 0
-                    ? `${pagination.page * pagination.pageSize + 1}-${Math.min(
-                        (pagination.page + 1) * pagination.pageSize,
-                        tableData.totalRows,
-                      )} of ${tableData.totalRows}`
-                    : '0 rows'}
-                </span>
-                <ButtonGroup aria-label="Pagination">
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 0 || isLoadingData}
-                  >
-                    <ChevronLeftIcon />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page >= totalPages - 1 || isLoadingData}
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                  <Button variant="outline" onClick={handleRefresh} disabled={isLoadingData}>
-                    <RefreshCwIcon className={cn(isLoadingData && 'animate-spin')} />
-                  </Button>
-                </ButtonGroup>
-              </div>
-            </div>
+            <TableToolbar
+              schema={selectedTable.schema}
+              table={selectedTable.table}
+              rows={tableData.rows}
+              columns={tableData.columns}
+              columnInfo={tableColumnInfo}
+              filters={filters}
+              visibleColumns={visibleColumns}
+              selectedCount={selectedRows.size}
+              pendingRow={pendingRow}
+              totalRows={tableData.totalRows}
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              isLoading={isLoadingData}
+              isInserting={isInserting}
+              isDeleting={isDeleting}
+              executionTime={tableData.executionTime}
+              onFiltersChange={handleFiltersChange}
+              onVisibilityChange={setVisibleColumns}
+              onAddRow={handleAddRow}
+              onSaveRow={handleSaveRow}
+              onDiscardRow={handleDiscardRow}
+              onDeletePrompt={handleDeletePrompt}
+              onPageChange={handlePageChange}
+              onRefresh={handleRefresh}
+            />
 
             {/* Data Grid */}
             <div className="flex-1 overflow-hidden">
@@ -587,11 +520,14 @@ export default function TablesPage({ params }: TablesPageProps) {
             </div>
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="text-center">
-              <p className="text-muted-foreground">Select a table from the sidebar to view data</p>
-            </div>
-          </div>
+          <TablesEmptyState
+            tableCount={schemas?.reduce((acc, s) => acc + s.tables.length, 0) ?? 0}
+            schemaCount={schemas?.length ?? 0}
+            isLoading={isLoadingSchema}
+            onOpenSql={() => router.push(`/workspace/${connectionId}/sql`)}
+            onRefresh={() => refetchSchema()}
+            isRefreshing={isFetchingSchema}
+          />
         )}
       </div>
 

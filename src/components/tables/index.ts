@@ -4,3 +4,4 @@ export * from './editable-cell';
 export * from './export-menu';
 export * from './table-data-grid';
 export * from './table-filters';
+export * from './table-toolbar';
